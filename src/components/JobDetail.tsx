@@ -188,7 +188,7 @@ export default function JobDetail({ job, store, driveConnected, onBack, onDelete
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`flex items-center gap-1.5 flex-shrink-0 px-4 py-3 text-sm font-medium transition-colors ${
+            className={`flex items-center gap-1.5 flex-shrink-0 px-6 py-4 text-sm font-medium transition-colors ${
               tab === t.id
                 ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
                 : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
