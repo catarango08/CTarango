@@ -1,0 +1,230 @@
+import type { ScopeItem, Material } from '../types';
+import { v4 as uuidv4 } from 'uuid';
+
+export interface JobTemplate {
+  id: string;
+  title: string;
+  scopeDescription: string;
+  scopeItems: Omit<ScopeItem, 'id'>[];
+  materials: Omit<Material, 'id'>[];
+  estimatedHours: number;
+}
+
+export const JOB_TEMPLATES: JobTemplate[] = [
+  {
+    id: 'service-panel-upgrade',
+    title: 'Service Panel Upgrade (100A → 200A)',
+    scopeDescription: 'Upgrade existing 100-amp electrical service to 200-amp service. Includes new meter base, main disconnect, load center, and all associated wiring.',
+    scopeItems: [
+      { description: 'Pull permits and schedule utility disconnect', notes: '' },
+      { description: 'Remove existing 100A panel and meter base', notes: '' },
+      { description: 'Install new 200A meter base', notes: '' },
+      { description: 'Install new 200A main breaker panel', notes: '' },
+      { description: 'Install 2-2-2-4 aluminum service entrance cable', notes: '' },
+      { description: 'Transfer all existing circuits to new panel', notes: '' },
+      { description: 'Install grounding electrode system (ground rods)', notes: '' },
+      { description: 'Label all circuits in new panel', notes: '' },
+      { description: 'Schedule utility reconnect', notes: '' },
+      { description: 'Final inspection', notes: '' },
+    ],
+    materials: [
+      { name: '200A Main Breaker Panel (40-space)', quantity: 1, unitCost: 280, supplier: '' },
+      { name: '200A Meter Base', quantity: 1, unitCost: 95, supplier: '' },
+      { name: '2-2-2-4 Aluminum SER Cable (per ft)', quantity: 30, unitCost: 4.50, supplier: '' },
+      { name: '8 AWG Copper Ground Wire (per ft)', quantity: 20, unitCost: 0.85, supplier: '' },
+      { name: '5/8" × 8\' Ground Rod', quantity: 2, unitCost: 18, supplier: '' },
+      { name: 'Ground Rod Clamp', quantity: 2, unitCost: 4, supplier: '' },
+      { name: 'Breaker Assortment (15A/20A)', quantity: 20, unitCost: 8, supplier: '' },
+      { name: 'Panel Connectors & Hardware', quantity: 1, unitCost: 45, supplier: '' },
+    ],
+    estimatedHours: 16,
+  },
+  {
+    id: 'ev-charger-install',
+    title: 'EV Charger Install (Level 2, 50A Circuit)',
+    scopeDescription: 'Install a dedicated 50-amp, 240V circuit for Level 2 EV charging. Run new circuit from panel to garage or driveway location.',
+    scopeItems: [
+      { description: 'Assess panel capacity and circuit path', notes: '' },
+      { description: 'Pull electrical permit if required', notes: '' },
+      { description: 'Install 50A double-pole breaker in panel', notes: '' },
+      { description: 'Run 6 AWG wire from panel to charging location', notes: '' },
+      { description: 'Install NEMA 14-50 outlet or hardwire EVSE', notes: '' },
+      { description: 'Mount and connect EV charger', notes: '' },
+      { description: 'Test charging unit', notes: '' },
+    ],
+    materials: [
+      { name: '50A Double-Pole Breaker', quantity: 1, unitCost: 35, supplier: '' },
+      { name: '6/3 NM-B Cable (per ft)', quantity: 50, unitCost: 3.20, supplier: '' },
+      { name: 'NEMA 14-50 Outlet', quantity: 1, unitCost: 22, supplier: '' },
+      { name: 'Metal Electrical Box', quantity: 1, unitCost: 8, supplier: '' },
+      { name: 'Wire Staples / Straps', quantity: 1, unitCost: 12, supplier: '' },
+      { name: 'Conduit & Fittings (if needed)', quantity: 1, unitCost: 35, supplier: '' },
+    ],
+    estimatedHours: 6,
+  },
+  {
+    id: 'generator-transfer-switch',
+    title: 'Generator Transfer Switch',
+    scopeDescription: 'Install a manual or automatic transfer switch to safely connect a portable or standby generator to the home\'s electrical system.',
+    scopeItems: [
+      { description: 'Determine generator size and circuit requirements', notes: '' },
+      { description: 'Pull permit', notes: '' },
+      { description: 'Install transfer switch (manual or ATS)', notes: '' },
+      { description: 'Install generator inlet box (if portable gen)', notes: '' },
+      { description: 'Connect selected circuits to transfer switch', notes: '' },
+      { description: 'Install 10 AWG cord from inlet to switch', notes: '' },
+      { description: 'Test transfer switch operation', notes: '' },
+      { description: 'Label all circuits on transfer switch', notes: '' },
+    ],
+    materials: [
+      { name: 'Manual Transfer Switch (6-circuit)', quantity: 1, unitCost: 145, supplier: '' },
+      { name: 'Generator Inlet Box (30A)', quantity: 1, unitCost: 45, supplier: '' },
+      { name: '10/4 Generator Cord (per ft)', quantity: 25, unitCost: 3.50, supplier: '' },
+      { name: 'Conduit & Fittings', quantity: 1, unitCost: 30, supplier: '' },
+      { name: 'Wire / Breakers', quantity: 1, unitCost: 55, supplier: '' },
+    ],
+    estimatedHours: 8,
+  },
+  {
+    id: 'bathroom-addition',
+    title: 'Bathroom Addition (New Circuits)',
+    scopeDescription: 'Rough and finish electrical for new bathroom addition. Includes lighting, GFCI outlets, exhaust fan, and dedicated circuits per NEC.',
+    scopeItems: [
+      { description: 'Rough-in: run circuits for lighting, GFCI outlets, exhaust fan', notes: '' },
+      { description: 'Install 20A GFCI circuit for outlets', notes: '' },
+      { description: 'Install dedicated 15A lighting circuit', notes: '' },
+      { description: 'Install exhaust fan with timer switch', notes: '' },
+      { description: 'Install GFCI outlets (min. 3 ft from water)', notes: '' },
+      { description: 'Install vanity light fixture', notes: '' },
+      { description: 'Install recessed lighting if specified', notes: '' },
+      { description: 'Install heating circuit if required', notes: '' },
+      { description: 'Final trim and test all devices', notes: '' },
+    ],
+    materials: [
+      { name: '20A GFCI Outlet', quantity: 2, unitCost: 18, supplier: '' },
+      { name: '15A Single-Pole Breaker', quantity: 2, unitCost: 8, supplier: '' },
+      { name: '20A Single-Pole Breaker', quantity: 1, unitCost: 10, supplier: '' },
+      { name: '12/2 NM-B Cable (per ft)', quantity: 60, unitCost: 1.20, supplier: '' },
+      { name: '14/2 NM-B Cable (per ft)', quantity: 40, unitCost: 0.85, supplier: '' },
+      { name: 'Exhaust Fan with Timer', quantity: 1, unitCost: 85, supplier: '' },
+      { name: 'Single-Pole Switch', quantity: 2, unitCost: 4, supplier: '' },
+      { name: 'Electrical Boxes', quantity: 6, unitCost: 3.50, supplier: '' },
+      { name: 'Cover Plates', quantity: 6, unitCost: 1.50, supplier: '' },
+    ],
+    estimatedHours: 10,
+  },
+  {
+    id: 'kitchen-remodel',
+    title: 'Kitchen Remodel (New Circuits)',
+    scopeDescription: 'Electrical rough-in and finish for kitchen remodel. Includes small appliance circuits, dedicated circuits for fridge/dishwasher/disposal, lighting, and under-cabinet lighting.',
+    scopeItems: [
+      { description: 'Plan circuit layout per NEC 210.52 kitchen requirements', notes: '' },
+      { description: 'Install two 20A small appliance circuits', notes: '' },
+      { description: 'Install dedicated 20A refrigerator circuit', notes: '' },
+      { description: 'Install dedicated 20A dishwasher circuit', notes: '' },
+      { description: 'Install dedicated 20A disposal circuit with switch', notes: '' },
+      { description: 'Install dedicated range/oven circuit (50A 240V)', notes: '' },
+      { description: 'Install recessed lighting circuit', notes: '' },
+      { description: 'Install under-cabinet lighting', notes: '' },
+      { description: 'Install GFCI outlets at counter locations', notes: '' },
+      { description: 'Label all new circuits in panel', notes: '' },
+    ],
+    materials: [
+      { name: '20A Single-Pole Breaker', quantity: 5, unitCost: 10, supplier: '' },
+      { name: '50A Double-Pole Breaker (range)', quantity: 1, unitCost: 28, supplier: '' },
+      { name: '12/2 NM-B Cable (per ft)', quantity: 200, unitCost: 1.20, supplier: '' },
+      { name: '6/3 NM-B Cable - range (per ft)', quantity: 30, unitCost: 3.20, supplier: '' },
+      { name: '20A GFCI Outlet', quantity: 6, unitCost: 18, supplier: '' },
+      { name: '20A Regular Outlet', quantity: 4, unitCost: 5, supplier: '' },
+      { name: 'Single-Pole Switch', quantity: 3, unitCost: 4, supplier: '' },
+      { name: 'Recessed Light Housing (LED)', quantity: 6, unitCost: 25, supplier: '' },
+      { name: 'Under-Cabinet LED Strips', quantity: 1, unitCost: 75, supplier: '' },
+      { name: 'Electrical Boxes', quantity: 14, unitCost: 3.50, supplier: '' },
+    ],
+    estimatedHours: 20,
+  },
+  {
+    id: 'outdoor-outlet-lighting',
+    title: 'Outdoor Outlet & Lighting',
+    scopeDescription: 'Install outdoor GFCI outlets and exterior lighting. All outdoor wiring in weatherproof conduit or UF-B cable per NEC requirements.',
+    scopeItems: [
+      { description: 'Plan circuit routing from panel to outdoor locations', notes: '' },
+      { description: 'Install 20A outdoor GFCI circuit from panel', notes: '' },
+      { description: 'Run UF-B or conduit to outlet locations', notes: '' },
+      { description: 'Install weatherproof GFCI outlets with covers', notes: '' },
+      { description: 'Install exterior light fixtures', notes: '' },
+      { description: 'Install photocell or timer switch for lighting', notes: '' },
+      { description: 'Test all outlets (GFCI trip/reset)', notes: '' },
+    ],
+    materials: [
+      { name: '20A Single-Pole Breaker', quantity: 1, unitCost: 10, supplier: '' },
+      { name: '12/2 UF-B Cable (per ft)', quantity: 80, unitCost: 1.50, supplier: '' },
+      { name: '20A GFCI Outlet', quantity: 2, unitCost: 18, supplier: '' },
+      { name: 'Weatherproof Box (in-use cover)', quantity: 2, unitCost: 12, supplier: '' },
+      { name: 'Exterior Light Fixture', quantity: 2, unitCost: 55, supplier: '' },
+      { name: 'Photocell Switch', quantity: 1, unitCost: 18, supplier: '' },
+      { name: 'PVC Conduit & Fittings', quantity: 1, unitCost: 35, supplier: '' },
+    ],
+    estimatedHours: 6,
+  },
+  {
+    id: 'gfci-afci-upgrade',
+    title: 'GFCI/AFCI Breaker Upgrade',
+    scopeDescription: 'Upgrade existing panel with combination AFCI/GFCI breakers as required by NEC for bedrooms, living areas, kitchens, and bathrooms.',
+    scopeItems: [
+      { description: 'Identify circuits requiring AFCI/GFCI protection per NEC', notes: '' },
+      { description: 'Remove existing standard breakers', notes: '' },
+      { description: 'Install Combination AFCI/GFCI breakers', notes: '' },
+      { description: 'Connect pigtail neutrals for AFCI breakers', notes: '' },
+      { description: 'Test all AFCI/GFCI breakers', notes: '' },
+      { description: 'Label upgraded circuits in panel directory', notes: '' },
+    ],
+    materials: [
+      { name: '15A Combo AFCI/GFCI Breaker', quantity: 6, unitCost: 55, supplier: '' },
+      { name: '20A Combo AFCI/GFCI Breaker', quantity: 4, unitCost: 65, supplier: '' },
+      { name: 'Wire Connectors / Misc', quantity: 1, unitCost: 15, supplier: '' },
+    ],
+    estimatedHours: 4,
+  },
+  {
+    id: 'subpanel-installation',
+    title: 'Subpanel Installation',
+    scopeDescription: 'Install a new subpanel to add capacity for garage, shop, addition, or outbuilding. Includes feeder circuit from main panel.',
+    scopeItems: [
+      { description: 'Determine subpanel size and feeder requirements', notes: '' },
+      { description: 'Pull permit', notes: '' },
+      { description: 'Install feeder breaker in main panel', notes: '' },
+      { description: 'Run feeder cable or conduit to subpanel location', notes: '' },
+      { description: 'Mount and install subpanel enclosure', notes: '' },
+      { description: 'Terminate feeder at subpanel', notes: '' },
+      { description: 'Install separate neutral/ground bus bars', notes: '' },
+      { description: 'Install grounding electrode at detached structure', notes: '' },
+      { description: 'Pull desired branch circuits in subpanel', notes: '' },
+      { description: 'Label all circuits', notes: '' },
+    ],
+    materials: [
+      { name: '100A Sub Panel (20-space)', quantity: 1, unitCost: 120, supplier: '' },
+      { name: '100A Double-Pole Breaker (main)', quantity: 1, unitCost: 40, supplier: '' },
+      { name: '2/3 Aluminum SER Cable (per ft)', quantity: 60, unitCost: 3.20, supplier: '' },
+      { name: 'Grounding Electrode Conductor', quantity: 1, unitCost: 25, supplier: '' },
+      { name: '5/8" × 8\' Ground Rod', quantity: 2, unitCost: 18, supplier: '' },
+      { name: 'Ground Rod Clamp', quantity: 2, unitCost: 4, supplier: '' },
+      { name: 'Conduit & Fittings', quantity: 1, unitCost: 45, supplier: '' },
+      { name: 'Breakers (15A/20A assorted)', quantity: 10, unitCost: 9, supplier: '' },
+    ],
+    estimatedHours: 12,
+  },
+];
+
+// Helper to create a job-ready template (with real UUIDs)
+export function applyTemplate(template: JobTemplate) {
+  return {
+    title: template.title,
+    scopeDescription: template.scopeDescription,
+    scopeItems: template.scopeItems.map(si => ({ ...si, id: uuidv4() })),
+    materials: template.materials.map(m => ({ ...m, id: uuidv4() })),
+    bid: {
+      laborHours: template.estimatedHours,
+    },
+  };
+}
