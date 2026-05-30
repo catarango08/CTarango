@@ -13,6 +13,7 @@ import TimeTrackingTab from './TimeTrackingTab';
 import ExpenseTab from './ExpenseTab';
 import ChangeOrderTab from './ChangeOrderTab';
 import PnLTab from './PnLTab';
+import NotesTab from './NotesTab';
 import CustomerSelectModal from './CustomerSelectModal';
 import { calcBidTotals, formatCurrency, formatDateTime } from '../utils';
 
@@ -24,7 +25,7 @@ interface Props {
   onDeleted: () => void;
 }
 
-type Tab = 'scope' | 'bid' | 'change-orders' | 'schedule' | 'time' | 'expenses' | 'pnl' | 'invoice' | 'photos' | 'safety';
+type Tab = 'scope' | 'bid' | 'change-orders' | 'schedule' | 'time' | 'expenses' | 'pnl' | 'invoice' | 'photos' | 'safety' | 'notes';
 
 const STATUS_FLOW: JobStatus[] = [
   'prospect', 'scoped', 'bid_sent', 'accepted', 'scheduled', 'in_progress', 'completed', 'invoiced',
@@ -71,6 +72,12 @@ export default function JobDetail({ job, store, driveConnected, onBack, onDelete
       label: 'Safety',
       badge: safetyDone > 0 ? safetyDone : undefined,
       badgeColor: safetyDone === safetyTotal ? 'bg-emerald-100 text-emerald-700' : 'bg-yellow-100 text-yellow-700',
+    },
+    {
+      id: 'notes',
+      label: 'Notes',
+      badge: job.notes ? 1 : undefined,
+      badgeColor: 'bg-slate-100 text-slate-600',
     },
   ];
 
@@ -188,7 +195,7 @@ export default function JobDetail({ job, store, driveConnected, onBack, onDelete
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`flex items-center gap-1.5 flex-shrink-0 px-6 py-4 text-sm font-medium transition-colors ${
+            className={`flex items-center gap-1.5 flex-shrink-0 px-8 py-5 text-sm font-medium transition-colors ${
               tab === t.id
                 ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
                 : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
@@ -274,6 +281,13 @@ export default function JobDetail({ job, store, driveConnected, onBack, onDelete
         <SafetyTab
           checklist={job.safetyChecklist ?? {}}
           onToggle={(itemId, checked) => store.toggleSafetyItem(job.id, itemId, checked)}
+        />
+      )}
+
+      {tab === 'notes' && (
+        <NotesTab
+          job={job}
+          onUpdateJob={changes => store.updateJob(job.id, changes)}
         />
       )}
 

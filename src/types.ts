@@ -106,6 +106,7 @@ export interface Job {
   customer: Customer;
   createdAt: string;
   updatedAt: string;
+  notes: string;
   scopeDescription: string;
   scopeItems: ScopeItem[];
   materials: Material[];

@@ -13,6 +13,7 @@ const CUSTOMERS_KEY = 'electrician-customers';
 function migrateJob(j: Job): Job {
   return {
     ...j,
+    notes: j.notes ?? '',
     photos: j.photos ?? [],
     safetyChecklist: j.safetyChecklist ?? {},
     timeEntries: j.timeEntries ?? [],
@@ -68,6 +69,7 @@ function newJob(settings: AppSettings): Job {
     customer: { name: '', phone: '', email: '', address: '' },
     createdAt: now,
     updatedAt: now,
+    notes: '',
     scopeDescription: '',
     scopeItems: [],
     materials: [],
