@@ -14,6 +14,7 @@ function loadJobs(): Job[] {
     return jobs.map(j => ({
       ...j,
       photos: j.photos ?? [],
+      safetyChecklist: j.safetyChecklist ?? {},
       invoice: j.invoice ?? {
         invoiceNumber: '',
         issueDate: '',
@@ -71,6 +72,7 @@ function newJob(settings: AppSettings): Job {
     },
     schedule: [],
     photos: [],
+    safetyChecklist: {},
   };
 }
 
@@ -113,6 +115,7 @@ export function useJobStore() {
     setJobs(incoming.map(j => ({
       ...j,
       photos: j.photos ?? [],
+      safetyChecklist: j.safetyChecklist ?? {},
       invoice: j.invoice ?? {
         invoiceNumber: '',
         issueDate: '',
@@ -221,6 +224,15 @@ export function useJobStore() {
     return `INV-${String(num).padStart(4, '0')}`;
   }
 
+  // ---------- Safety Checklist ----------
+  function toggleSafetyItem(jobId: string, itemId: string, checked: boolean) {
+    setJobs(prev => prev.map(j =>
+      j.id === jobId
+        ? touch({ ...j, safetyChecklist: { ...j.safetyChecklist, [itemId]: checked } })
+        : j
+    ));
+  }
+
   // ---------- Status ----------
   function updateStatus(jobId: string, status: JobStatus) {
     updateJob(jobId, { status });
@@ -247,6 +259,7 @@ export function useJobStore() {
     updatePhoto,
     removePhoto,
     nextInvoiceNumber,
+    toggleSafetyItem,
     updateStatus,
   };
 }

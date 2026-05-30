@@ -8,6 +8,7 @@ import BidTab from './BidTab';
 import ScheduleTab from './ScheduleTab';
 import InvoiceTab from './InvoiceTab';
 import PhotosTab from './PhotosTab';
+import SafetyTab from './SafetyTab';
 import { calcBidTotals, formatCurrency, formatDateTime } from '../utils';
 
 interface Props {
@@ -18,7 +19,7 @@ interface Props {
   onDeleted: () => void;
 }
 
-type Tab = 'scope' | 'bid' | 'schedule' | 'invoice' | 'photos';
+type Tab = 'scope' | 'bid' | 'schedule' | 'invoice' | 'photos' | 'safety';
 
 const STATUS_FLOW: JobStatus[] = [
   'prospect', 'scoped', 'bid_sent', 'accepted', 'scheduled', 'in_progress', 'completed', 'invoiced',
@@ -30,12 +31,21 @@ export default function JobDetail({ job, store, driveConnected, onBack, onDelete
 
   const { total } = calcBidTotals(job);
 
-  const tabs: { id: Tab; label: string; badge?: number }[] = [
+  const safetyTotal = 42; // total NFPA 70E items
+  const safetyDone = Object.values(job.safetyChecklist ?? {}).filter(Boolean).length;
+
+  const tabs: { id: Tab; label: string; badge?: number; badgeColor?: string }[] = [
     { id: 'scope', label: 'Scope' },
     { id: 'bid', label: 'Bid' },
     { id: 'schedule', label: 'Schedule' },
     { id: 'invoice', label: 'Invoice' },
     { id: 'photos', label: 'Photos', badge: job.photos.length || undefined },
+    {
+      id: 'safety',
+      label: 'Safety',
+      badge: safetyDone > 0 ? safetyDone : undefined,
+      badgeColor: safetyDone === safetyTotal ? 'bg-emerald-100 text-emerald-700' : 'bg-yellow-100 text-yellow-700',
+    },
   ];
 
   return (
@@ -148,7 +158,7 @@ export default function JobDetail({ job, store, driveConnected, onBack, onDelete
           >
             {t.label}
             {t.badge ? (
-              <span className="bg-blue-100 text-blue-700 text-xs rounded-full px-1.5 py-0.5 leading-none">
+              <span className={`text-xs rounded-full px-1.5 py-0.5 leading-none ${t.badgeColor ?? 'bg-blue-100 text-blue-700'}`}>
                 {t.badge}
               </span>
             ) : null}
@@ -203,6 +213,13 @@ export default function JobDetail({ job, store, driveConnected, onBack, onDelete
           onAddPhoto={photo => store.addPhoto(job.id, photo)}
           onUpdatePhoto={(id, changes) => store.updatePhoto(job.id, id, changes)}
           onRemovePhoto={id => store.removePhoto(job.id, id)}
+        />
+      )}
+
+      {tab === 'safety' && (
+        <SafetyTab
+          checklist={job.safetyChecklist ?? {}}
+          onToggle={(itemId, checked) => store.toggleSafetyItem(job.id, itemId, checked)}
         />
       )}
 

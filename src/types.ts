@@ -83,6 +83,7 @@ export interface Job {
   invoice: Invoice;
   schedule: ScheduleEntry[];
   photos: Photo[];
+  safetyChecklist: Record<string, boolean>;
 }
 
 export interface BusinessProfile {
