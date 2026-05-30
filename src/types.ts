@@ -69,6 +69,36 @@ export interface Photo {
   caption: string;
 }
 
+export interface TimeEntry {
+  id: string;
+  clockIn: string; // ISO
+  clockOut: string | null; // ISO or null if still clocked in
+  notes: string;
+}
+
+export type ExpenseCategory = 'Material' | 'Mileage' | 'Permit' | 'Fuel' | 'Parking' | 'Tool' | 'Other';
+
+export interface Expense {
+  id: string;
+  date: string; // YYYY-MM-DD
+  category: ExpenseCategory;
+  description: string;
+  amount: number;
+  miles?: number; // for mileage entries
+}
+
+export interface ChangeOrder {
+  id: string;
+  number: number;
+  title: string;
+  description: string;
+  laborHours: number;
+  materialCost: number;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string; // ISO
+  respondedAt: string | null; // ISO
+}
+
 export interface Job {
   id: string;
   title: string;
@@ -84,6 +114,9 @@ export interface Job {
   schedule: ScheduleEntry[];
   photos: Photo[];
   safetyChecklist: Record<string, boolean>;
+  timeEntries: TimeEntry[];
+  expenses: Expense[];
+  changeOrders: ChangeOrder[];
 }
 
 export interface BusinessProfile {
@@ -102,6 +135,7 @@ export interface AppSettings {
   defaultLaborRate: number;
   defaultMarkup: number;
   nextInvoiceNumber: number;
+  mileageRate: number;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -118,6 +152,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   defaultLaborRate: 85,
   defaultMarkup: 20,
   nextInvoiceNumber: 1001,
+  mileageRate: 0.67,
 };
 
 export const JOB_STATUS_LABELS: Record<JobStatus, string> = {
@@ -141,3 +176,14 @@ export const JOB_STATUS_COLORS: Record<JobStatus, string> = {
   completed: 'bg-emerald-100 text-emerald-700',
   invoiced: 'bg-teal-100 text-teal-700',
 };
+
+// Customer Database record (separate from job Customer inline)
+export interface CustomerRecord {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  address: string;
+  notes: string;
+  createdAt: string;
+}

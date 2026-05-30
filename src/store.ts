@@ -1,31 +1,41 @@
 import { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import type { Job, JobStatus, ScopeItem, Material, ScheduleEntry, Photo, AppSettings } from './types';
+import type {
+  Job, JobStatus, ScopeItem, Material, ScheduleEntry, Photo,
+  AppSettings, TimeEntry, Expense, ChangeOrder, CustomerRecord,
+} from './types';
 import { DEFAULT_SETTINGS } from './types';
 
 const JOBS_KEY = 'electrician-jobs';
 const SETTINGS_KEY = 'electrician-settings';
+const CUSTOMERS_KEY = 'electrician-customers';
+
+function migrateJob(j: Job): Job {
+  return {
+    ...j,
+    photos: j.photos ?? [],
+    safetyChecklist: j.safetyChecklist ?? {},
+    timeEntries: j.timeEntries ?? [],
+    expenses: j.expenses ?? [],
+    changeOrders: j.changeOrders ?? [],
+    invoice: j.invoice ?? {
+      invoiceNumber: '',
+      issueDate: '',
+      dueDate: '',
+      paymentTerms: 'Due on Receipt',
+      notes: '',
+      status: 'draft' as const,
+      sentAt: null,
+      paidAt: null,
+    },
+  };
+}
 
 function loadJobs(): Job[] {
   try {
     const raw = localStorage.getItem(JOBS_KEY);
     const jobs: Job[] = raw ? JSON.parse(raw) : [];
-    // Migrate old jobs that lack new fields
-    return jobs.map(j => ({
-      ...j,
-      photos: j.photos ?? [],
-      safetyChecklist: j.safetyChecklist ?? {},
-      invoice: j.invoice ?? {
-        invoiceNumber: '',
-        issueDate: '',
-        dueDate: '',
-        paymentTerms: 'Due on Receipt',
-        notes: '',
-        status: 'draft' as const,
-        sentAt: null,
-        paidAt: null,
-      },
-    }));
+    return jobs.map(migrateJob);
   } catch {
     return [];
   }
@@ -37,6 +47,15 @@ function loadSettings(): AppSettings {
     return raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : DEFAULT_SETTINGS;
   } catch {
     return DEFAULT_SETTINGS;
+  }
+}
+
+function loadCustomers(): CustomerRecord[] {
+  try {
+    const raw = localStorage.getItem(CUSTOMERS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
   }
 }
 
@@ -73,12 +92,16 @@ function newJob(settings: AppSettings): Job {
     schedule: [],
     photos: [],
     safetyChecklist: {},
+    timeEntries: [],
+    expenses: [],
+    changeOrders: [],
   };
 }
 
 export function useJobStore() {
   const [jobs, setJobs] = useState<Job[]>(loadJobs);
   const [settings, setSettings] = useState<AppSettings>(loadSettings);
+  const [customers, setCustomers] = useState<CustomerRecord[]>(loadCustomers);
 
   useEffect(() => {
     localStorage.setItem(JOBS_KEY, JSON.stringify(jobs));
@@ -87,6 +110,10 @@ export function useJobStore() {
   useEffect(() => {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   }, [settings]);
+
+  useEffect(() => {
+    localStorage.setItem(CUSTOMERS_KEY, JSON.stringify(customers));
+  }, [customers]);
 
   function updateSettings(changes: Partial<AppSettings>) {
     setSettings(s => ({ ...s, ...changes }));
@@ -112,21 +139,7 @@ export function useJobStore() {
 
   // Replace all jobs (used when loading from Drive)
   function replaceAllJobs(incoming: Job[]) {
-    setJobs(incoming.map(j => ({
-      ...j,
-      photos: j.photos ?? [],
-      safetyChecklist: j.safetyChecklist ?? {},
-      invoice: j.invoice ?? {
-        invoiceNumber: '',
-        issueDate: '',
-        dueDate: '',
-        paymentTerms: 'Due on Receipt',
-        notes: '',
-        status: 'draft' as const,
-        sentAt: null,
-        paidAt: null,
-      },
-    })));
+    setJobs(incoming.map(migrateJob));
   }
 
   // ---------- Scope ----------
@@ -238,9 +251,129 @@ export function useJobStore() {
     updateJob(jobId, { status });
   }
 
+  // ---------- Time Tracking ----------
+  function clockIn(jobId: string): string {
+    const entry: TimeEntry = {
+      id: uuidv4(),
+      clockIn: new Date().toISOString(),
+      clockOut: null,
+      notes: '',
+    };
+    setJobs(prev => prev.map(j =>
+      j.id === jobId ? touch({ ...j, timeEntries: [...j.timeEntries, entry] }) : j
+    ));
+    return entry.id;
+  }
+
+  function clockOut(jobId: string, entryId: string, notes: string) {
+    setJobs(prev => prev.map(j =>
+      j.id === jobId
+        ? touch({
+            ...j,
+            timeEntries: j.timeEntries.map(e =>
+              e.id === entryId
+                ? { ...e, clockOut: new Date().toISOString(), notes }
+                : e
+            ),
+          })
+        : j
+    ));
+  }
+
+  function updateTimeEntry(jobId: string, entryId: string, changes: Partial<TimeEntry>) {
+    setJobs(prev => prev.map(j =>
+      j.id === jobId
+        ? touch({ ...j, timeEntries: j.timeEntries.map(e => e.id === entryId ? { ...e, ...changes } : e) })
+        : j
+    ));
+  }
+
+  function removeTimeEntry(jobId: string, entryId: string) {
+    setJobs(prev => prev.map(j =>
+      j.id === jobId ? touch({ ...j, timeEntries: j.timeEntries.filter(e => e.id !== entryId) }) : j
+    ));
+  }
+
+  // ---------- Expenses ----------
+  function addExpense(jobId: string, expense: Omit<Expense, 'id'>): string {
+    const id = uuidv4();
+    const e: Expense = { ...expense, id };
+    setJobs(prev => prev.map(j =>
+      j.id === jobId ? touch({ ...j, expenses: [...j.expenses, e] }) : j
+    ));
+    return id;
+  }
+
+  function updateExpense(jobId: string, expenseId: string, changes: Partial<Expense>) {
+    setJobs(prev => prev.map(j =>
+      j.id === jobId
+        ? touch({ ...j, expenses: j.expenses.map(e => e.id === expenseId ? { ...e, ...changes } : e) })
+        : j
+    ));
+  }
+
+  function removeExpense(jobId: string, expenseId: string) {
+    setJobs(prev => prev.map(j =>
+      j.id === jobId ? touch({ ...j, expenses: j.expenses.filter(e => e.id !== expenseId) }) : j
+    ));
+  }
+
+  // ---------- Change Orders ----------
+  function addChangeOrder(jobId: string, co: Omit<ChangeOrder, 'id' | 'number' | 'createdAt' | 'respondedAt' | 'status'>): string {
+    const job = jobs.find(j => j.id === jobId);
+    const maxNum = job ? Math.max(0, ...job.changeOrders.map(c => c.number)) : 0;
+    const newCo: ChangeOrder = {
+      ...co,
+      id: uuidv4(),
+      number: maxNum + 1,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      respondedAt: null,
+    };
+    setJobs(prev => prev.map(j =>
+      j.id === jobId ? touch({ ...j, changeOrders: [...j.changeOrders, newCo] }) : j
+    ));
+    return newCo.id;
+  }
+
+  function respondChangeOrder(jobId: string, coId: string, status: 'approved' | 'rejected') {
+    setJobs(prev => prev.map(j =>
+      j.id === jobId
+        ? touch({
+            ...j,
+            changeOrders: j.changeOrders.map(co =>
+              co.id === coId ? { ...co, status, respondedAt: new Date().toISOString() } : co
+            ),
+          })
+        : j
+    ));
+  }
+
+  function removeChangeOrder(jobId: string, coId: string) {
+    setJobs(prev => prev.map(j =>
+      j.id === jobId ? touch({ ...j, changeOrders: j.changeOrders.filter(co => co.id !== coId) }) : j
+    ));
+  }
+
+  // ---------- Customer Database ----------
+  function createCustomer(data: Omit<CustomerRecord, 'id' | 'createdAt'>): CustomerRecord {
+    const c: CustomerRecord = { ...data, id: uuidv4(), createdAt: new Date().toISOString() };
+    setCustomers(prev => [...prev, c]);
+    return c;
+  }
+
+  function updateCustomer(id: string, changes: Partial<CustomerRecord>) {
+    setCustomers(prev => prev.map(c => c.id === id ? { ...c, ...changes } : c));
+  }
+
+  function deleteCustomer(id: string) {
+    setCustomers(prev => prev.filter(c => c.id !== id));
+  }
+
   return {
     jobs,
     settings,
+    customers,
     updateSettings,
     createJob,
     updateJob,
@@ -261,5 +394,18 @@ export function useJobStore() {
     nextInvoiceNumber,
     toggleSafetyItem,
     updateStatus,
+    clockIn,
+    clockOut,
+    updateTimeEntry,
+    removeTimeEntry,
+    addExpense,
+    updateExpense,
+    removeExpense,
+    addChangeOrder,
+    respondChangeOrder,
+    removeChangeOrder,
+    createCustomer,
+    updateCustomer,
+    deleteCustomer,
   };
 }
