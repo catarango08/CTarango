@@ -2,40 +2,40 @@ import { useState } from 'react';
 import { ArrowLeft, Trash2, User, MapPin, Phone, Mail } from 'lucide-react';
 import type { Job, JobStatus } from '../types';
 import { JOB_STATUS_LABELS, JOB_STATUS_COLORS } from '../types';
-import { useJobStore } from '../store';
+import type { useJobStore } from '../store';
 import ScopeTab from './ScopeTab';
 import BidTab from './BidTab';
 import ScheduleTab from './ScheduleTab';
+import InvoiceTab from './InvoiceTab';
+import PhotosTab from './PhotosTab';
 import { calcBidTotals, formatCurrency, formatDateTime } from '../utils';
 
 interface Props {
   job: Job;
   store: ReturnType<typeof useJobStore>;
+  driveConnected: boolean;
   onBack: () => void;
   onDeleted: () => void;
 }
 
-type Tab = 'scope' | 'bid' | 'schedule';
+type Tab = 'scope' | 'bid' | 'schedule' | 'invoice' | 'photos';
 
 const STATUS_FLOW: JobStatus[] = [
   'prospect', 'scoped', 'bid_sent', 'accepted', 'scheduled', 'in_progress', 'completed', 'invoiced',
 ];
 
-export default function JobDetail({ job, store, onBack, onDeleted }: Props) {
+export default function JobDetail({ job, store, driveConnected, onBack, onDeleted }: Props) {
   const [tab, setTab] = useState<Tab>('scope');
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const { total } = calcBidTotals(job);
 
-  function handleDelete() {
-    store.deleteJob(job.id);
-    onDeleted();
-  }
-
-  const tabs: { id: Tab; label: string }[] = [
+  const tabs: { id: Tab; label: string; badge?: number }[] = [
     { id: 'scope', label: 'Scope' },
     { id: 'bid', label: 'Bid' },
     { id: 'schedule', label: 'Schedule' },
+    { id: 'invoice', label: 'Invoice' },
+    { id: 'photos', label: 'Photos', badge: job.photos.length || undefined },
   ];
 
   return (
@@ -135,18 +135,23 @@ export default function JobDetail({ job, store, onBack, onDeleted }: Props) {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-200 bg-white rounded-t-xl overflow-hidden">
+      <div className="flex border-b border-slate-200 bg-white rounded-t-xl overflow-x-auto">
         {tabs.map(t => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`flex-1 py-3 text-sm font-medium transition-colors ${
+            className={`flex items-center gap-1.5 flex-shrink-0 px-4 py-3 text-sm font-medium transition-colors ${
               tab === t.id
                 ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
                 : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
             }`}
           >
             {t.label}
+            {t.badge ? (
+              <span className="bg-blue-100 text-blue-700 text-xs rounded-full px-1.5 py-0.5 leading-none">
+                {t.badge}
+              </span>
+            ) : null}
           </button>
         ))}
       </div>
@@ -164,6 +169,7 @@ export default function JobDetail({ job, store, onBack, onDeleted }: Props) {
       {tab === 'bid' && (
         <BidTab
           job={job}
+          business={store.settings.business}
           onUpdateJob={changes => store.updateJob(job.id, changes)}
           onAddMaterial={() => store.addMaterial(job.id)}
           onUpdateMaterial={(id, changes) => store.updateMaterial(job.id, id, changes)}
@@ -180,13 +186,33 @@ export default function JobDetail({ job, store, onBack, onDeleted }: Props) {
         />
       )}
 
+      {tab === 'invoice' && (
+        <InvoiceTab
+          job={job}
+          business={store.settings.business}
+          onUpdateJob={changes => store.updateJob(job.id, changes)}
+          onGenerateNumber={() => store.nextInvoiceNumber()}
+        />
+      )}
+
+      {tab === 'photos' && (
+        <PhotosTab
+          job={job}
+          googleClientId={store.settings.googleClientId}
+          driveConnected={driveConnected}
+          onAddPhoto={photo => store.addPhoto(job.id, photo)}
+          onUpdatePhoto={(id, changes) => store.updatePhoto(job.id, id, changes)}
+          onRemovePhoto={id => store.removePhoto(job.id, id)}
+        />
+      )}
+
       {/* Delete Confirm Modal */}
       {confirmDelete && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl p-6 max-w-sm w-full shadow-xl">
             <h3 className="font-semibold text-slate-800 text-lg mb-2">Delete Job?</h3>
             <p className="text-slate-500 text-sm mb-5">
-              This will permanently delete "{job.title || 'Untitled Job'}" and all its data. This cannot be undone.
+              This will permanently delete "{job.title || 'Untitled Job'}" and all its data.
             </p>
             <div className="flex gap-3">
               <button
@@ -196,7 +222,7 @@ export default function JobDetail({ job, store, onBack, onDeleted }: Props) {
                 Cancel
               </button>
               <button
-                onClick={handleDelete}
+                onClick={() => { store.deleteJob(job.id); onDeleted(); }}
                 className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
               >
                 Delete

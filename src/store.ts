@@ -1,23 +1,45 @@
 import { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import type { Job, JobStatus, ScopeItem, Material, ScheduleEntry } from './types';
+import type { Job, JobStatus, ScopeItem, Material, ScheduleEntry, Photo, AppSettings } from './types';
+import { DEFAULT_SETTINGS } from './types';
 
-const STORAGE_KEY = 'electrician-jobs';
+const JOBS_KEY = 'electrician-jobs';
+const SETTINGS_KEY = 'electrician-settings';
 
 function loadJobs(): Job[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    const raw = localStorage.getItem(JOBS_KEY);
+    const jobs: Job[] = raw ? JSON.parse(raw) : [];
+    // Migrate old jobs that lack new fields
+    return jobs.map(j => ({
+      ...j,
+      photos: j.photos ?? [],
+      invoice: j.invoice ?? {
+        invoiceNumber: '',
+        issueDate: '',
+        dueDate: '',
+        paymentTerms: 'Due on Receipt',
+        notes: '',
+        status: 'draft' as const,
+        sentAt: null,
+        paidAt: null,
+      },
+    }));
   } catch {
     return [];
   }
 }
 
-function saveJobs(jobs: Job[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(jobs));
+function loadSettings(): AppSettings {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    return raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : DEFAULT_SETTINGS;
+  } catch {
+    return DEFAULT_SETTINGS;
+  }
 }
 
-function newJob(): Job {
+function newJob(settings: AppSettings): Job {
   const now = new Date().toISOString();
   return {
     id: uuidv4(),
@@ -30,127 +52,124 @@ function newJob(): Job {
     scopeItems: [],
     materials: [],
     bid: {
-      laborRate: 85,
+      laborRate: settings.defaultLaborRate,
       laborHours: 0,
-      materialMarkup: 20,
+      materialMarkup: settings.defaultMarkup,
       notes: '',
       status: 'draft',
       sentAt: null,
     },
+    invoice: {
+      invoiceNumber: '',
+      issueDate: '',
+      dueDate: '',
+      paymentTerms: 'Due on Receipt',
+      notes: '',
+      status: 'draft',
+      sentAt: null,
+      paidAt: null,
+    },
     schedule: [],
+    photos: [],
   };
 }
 
 export function useJobStore() {
   const [jobs, setJobs] = useState<Job[]>(loadJobs);
+  const [settings, setSettings] = useState<AppSettings>(loadSettings);
 
   useEffect(() => {
-    saveJobs(jobs);
+    localStorage.setItem(JOBS_KEY, JSON.stringify(jobs));
   }, [jobs]);
 
-  function updateJobs(updated: Job[]) {
-    setJobs(updated);
+  useEffect(() => {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  }, [settings]);
+
+  function updateSettings(changes: Partial<AppSettings>) {
+    setSettings(s => ({ ...s, ...changes }));
+  }
+
+  function touch(j: Job): Job {
+    return { ...j, updatedAt: new Date().toISOString() };
   }
 
   function createJob(partial: Partial<Job>): Job {
-    const job = { ...newJob(), ...partial, id: uuidv4() };
-    updateJobs([...jobs, job]);
+    const job = { ...newJob(settings), ...partial, id: uuidv4() };
+    setJobs(prev => [...prev, job]);
     return job;
   }
 
   function updateJob(id: string, changes: Partial<Job>) {
-    setJobs(prev =>
-      prev.map(j =>
-        j.id === id ? { ...j, ...changes, updatedAt: new Date().toISOString() } : j
-      )
-    );
+    setJobs(prev => prev.map(j => j.id === id ? touch({ ...j, ...changes }) : j));
   }
 
   function deleteJob(id: string) {
     setJobs(prev => prev.filter(j => j.id !== id));
   }
 
-  function addScopeItem(jobId: string) {
+  // Replace all jobs (used when loading from Drive)
+  function replaceAllJobs(incoming: Job[]) {
+    setJobs(incoming.map(j => ({
+      ...j,
+      photos: j.photos ?? [],
+      invoice: j.invoice ?? {
+        invoiceNumber: '',
+        issueDate: '',
+        dueDate: '',
+        paymentTerms: 'Due on Receipt',
+        notes: '',
+        status: 'draft' as const,
+        sentAt: null,
+        paidAt: null,
+      },
+    })));
+  }
+
+  // ---------- Scope ----------
+  function addScopeItem(jobId: string): string {
     const item: ScopeItem = { id: uuidv4(), description: '', notes: '' };
-    setJobs(prev =>
-      prev.map(j =>
-        j.id === jobId
-          ? { ...j, scopeItems: [...j.scopeItems, item], updatedAt: new Date().toISOString() }
-          : j
-      )
-    );
+    setJobs(prev => prev.map(j => j.id === jobId ? touch({ ...j, scopeItems: [...j.scopeItems, item] }) : j));
     return item.id;
   }
 
   function updateScopeItem(jobId: string, itemId: string, changes: Partial<ScopeItem>) {
-    setJobs(prev =>
-      prev.map(j =>
-        j.id === jobId
-          ? {
-              ...j,
-              scopeItems: j.scopeItems.map(i => (i.id === itemId ? { ...i, ...changes } : i)),
-              updatedAt: new Date().toISOString(),
-            }
-          : j
-      )
-    );
+    setJobs(prev => prev.map(j =>
+      j.id === jobId
+        ? touch({ ...j, scopeItems: j.scopeItems.map(i => i.id === itemId ? { ...i, ...changes } : i) })
+        : j
+    ));
   }
 
   function removeScopeItem(jobId: string, itemId: string) {
-    setJobs(prev =>
-      prev.map(j =>
-        j.id === jobId
-          ? {
-              ...j,
-              scopeItems: j.scopeItems.filter(i => i.id !== itemId),
-              updatedAt: new Date().toISOString(),
-            }
-          : j
-      )
-    );
+    setJobs(prev => prev.map(j =>
+      j.id === jobId ? touch({ ...j, scopeItems: j.scopeItems.filter(i => i.id !== itemId) }) : j
+    ));
   }
 
-  function addMaterial(jobId: string) {
+  // ---------- Materials ----------
+  function addMaterial(jobId: string): string {
     const mat: Material = { id: uuidv4(), name: '', quantity: 1, unitCost: 0, supplier: '' };
-    setJobs(prev =>
-      prev.map(j =>
-        j.id === jobId
-          ? { ...j, materials: [...j.materials, mat], updatedAt: new Date().toISOString() }
-          : j
-      )
-    );
+    setJobs(prev => prev.map(j => j.id === jobId ? touch({ ...j, materials: [...j.materials, mat] }) : j));
     return mat.id;
   }
 
   function updateMaterial(jobId: string, matId: string, changes: Partial<Material>) {
-    setJobs(prev =>
-      prev.map(j =>
-        j.id === jobId
-          ? {
-              ...j,
-              materials: j.materials.map(m => (m.id === matId ? { ...m, ...changes } : m)),
-              updatedAt: new Date().toISOString(),
-            }
-          : j
-      )
-    );
+    setJobs(prev => prev.map(j =>
+      j.id === jobId
+        ? touch({ ...j, materials: j.materials.map(m => m.id === matId ? { ...m, ...changes } : m) })
+        : j
+    ));
   }
 
   function removeMaterial(jobId: string, matId: string) {
-    setJobs(prev =>
-      prev.map(j =>
-        j.id === jobId
-          ? {
-              ...j,
-              materials: j.materials.filter(m => m.id !== matId),
-              updatedAt: new Date().toISOString(),
-            }
-          : j
-      )
-    );
+    setJobs(prev => prev.map(j =>
+      j.id === jobId ? touch({ ...j, materials: j.materials.filter(m => m.id !== matId) }) : j
+    ));
   }
 
-  function addScheduleEntry(jobId: string) {
+  // ---------- Schedule ----------
+  function addScheduleEntry(jobId: string): string {
     const entry: ScheduleEntry = {
       id: uuidv4(),
       date: new Date().toISOString().split('T')[0],
@@ -158,53 +177,63 @@ export function useJobStore() {
       endTime: '17:00',
       notes: '',
     };
-    setJobs(prev =>
-      prev.map(j =>
-        j.id === jobId
-          ? { ...j, schedule: [...j.schedule, entry], updatedAt: new Date().toISOString() }
-          : j
-      )
-    );
+    setJobs(prev => prev.map(j => j.id === jobId ? touch({ ...j, schedule: [...j.schedule, entry] }) : j));
     return entry.id;
   }
 
   function updateScheduleEntry(jobId: string, entryId: string, changes: Partial<ScheduleEntry>) {
-    setJobs(prev =>
-      prev.map(j =>
-        j.id === jobId
-          ? {
-              ...j,
-              schedule: j.schedule.map(e => (e.id === entryId ? { ...e, ...changes } : e)),
-              updatedAt: new Date().toISOString(),
-            }
-          : j
-      )
-    );
+    setJobs(prev => prev.map(j =>
+      j.id === jobId
+        ? touch({ ...j, schedule: j.schedule.map(e => e.id === entryId ? { ...e, ...changes } : e) })
+        : j
+    ));
   }
 
   function removeScheduleEntry(jobId: string, entryId: string) {
-    setJobs(prev =>
-      prev.map(j =>
-        j.id === jobId
-          ? {
-              ...j,
-              schedule: j.schedule.filter(e => e.id !== entryId),
-              updatedAt: new Date().toISOString(),
-            }
-          : j
-      )
-    );
+    setJobs(prev => prev.map(j =>
+      j.id === jobId ? touch({ ...j, schedule: j.schedule.filter(e => e.id !== entryId) }) : j
+    ));
   }
 
+  // ---------- Photos ----------
+  function addPhoto(jobId: string, photo: Photo) {
+    setJobs(prev => prev.map(j => j.id === jobId ? touch({ ...j, photos: [...j.photos, photo] }) : j));
+  }
+
+  function updatePhoto(jobId: string, photoId: string, changes: Partial<Photo>) {
+    setJobs(prev => prev.map(j =>
+      j.id === jobId
+        ? touch({ ...j, photos: j.photos.map(p => p.id === photoId ? { ...p, ...changes } : p) })
+        : j
+    ));
+  }
+
+  function removePhoto(jobId: string, photoId: string) {
+    setJobs(prev => prev.map(j =>
+      j.id === jobId ? touch({ ...j, photos: j.photos.filter(p => p.id !== photoId) }) : j
+    ));
+  }
+
+  // ---------- Invoice ----------
+  function nextInvoiceNumber(): string {
+    const num = settings.nextInvoiceNumber;
+    updateSettings({ nextInvoiceNumber: num + 1 });
+    return `INV-${String(num).padStart(4, '0')}`;
+  }
+
+  // ---------- Status ----------
   function updateStatus(jobId: string, status: JobStatus) {
     updateJob(jobId, { status });
   }
 
   return {
     jobs,
+    settings,
+    updateSettings,
     createJob,
     updateJob,
     deleteJob,
+    replaceAllJobs,
     addScopeItem,
     updateScopeItem,
     removeScopeItem,
@@ -214,6 +243,10 @@ export function useJobStore() {
     addScheduleEntry,
     updateScheduleEntry,
     removeScheduleEntry,
+    addPhoto,
+    updatePhoto,
+    removePhoto,
+    nextInvoiceNumber,
     updateStatus,
   };
 }

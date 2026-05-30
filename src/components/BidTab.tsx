@@ -1,9 +1,11 @@
-import { Plus, Trash2, FileText, Send } from 'lucide-react';
-import type { Job } from '../types';
+import { Plus, Trash2, Send, Download } from 'lucide-react';
+import type { Job, BusinessProfile } from '../types';
 import { calcBidTotals, formatCurrency } from '../utils';
+import { exportBidPDF } from '../lib/pdf';
 
 interface Props {
   job: Job;
+  business: BusinessProfile;
   onUpdateJob: (changes: Partial<Job>) => void;
   onAddMaterial: () => void;
   onUpdateMaterial: (id: string, changes: Partial<{ name: string; quantity: number; unitCost: number; supplier: string }>) => void;
@@ -12,6 +14,7 @@ interface Props {
 
 export default function BidTab({
   job,
+  business,
   onUpdateJob,
   onAddMaterial,
   onUpdateMaterial,
@@ -24,8 +27,8 @@ export default function BidTab({
   }
 
   function markSent() {
-    updateBid({ status: 'sent', sentAt: new Date().toISOString() });
-    onUpdateJob({ status: 'bid_sent', bid: { ...job.bid, status: 'sent', sentAt: new Date().toISOString() } });
+    const now = new Date().toISOString();
+    onUpdateJob({ status: 'bid_sent', bid: { ...job.bid, status: 'sent', sentAt: now } });
   }
 
   const BID_STATUS_COLORS = {
@@ -203,7 +206,7 @@ export default function BidTab({
           className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
         />
 
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-2">
             <span className="text-sm text-slate-600">Bid Status:</span>
             <select
@@ -219,11 +222,11 @@ export default function BidTab({
           </div>
           <div className="flex gap-2">
             <button
-              onClick={() => window.print()}
+              onClick={() => exportBidPDF(job, business)}
               className="flex items-center gap-2 px-3 py-2 border border-slate-200 rounded-lg text-sm hover:bg-slate-50 transition-colors"
             >
-              <FileText size={15} />
-              Print
+              <Download size={15} />
+              Export PDF
             </button>
             {job.bid.status === 'draft' && (
               <button

@@ -38,12 +38,35 @@ export interface Bid {
   sentAt: string | null;
 }
 
+export interface Invoice {
+  invoiceNumber: string;
+  issueDate: string;
+  dueDate: string;
+  paymentTerms: string;
+  notes: string;
+  status: 'draft' | 'sent' | 'paid';
+  sentAt: string | null;
+  paidAt: string | null;
+}
+
 export interface ScheduleEntry {
   id: string;
   date: string;
   startTime: string;
   endTime: string;
   notes: string;
+}
+
+export interface Photo {
+  id: string;
+  name: string;
+  dataUrl?: string;
+  driveFileId?: string;
+  driveThumbnailLink?: string;
+  driveWebViewLink?: string;
+  uploadedAt: string;
+  sizeBytes: number;
+  caption: string;
 }
 
 export interface Job {
@@ -57,8 +80,44 @@ export interface Job {
   scopeItems: ScopeItem[];
   materials: Material[];
   bid: Bid;
+  invoice: Invoice;
   schedule: ScheduleEntry[];
+  photos: Photo[];
 }
+
+export interface BusinessProfile {
+  companyName: string;
+  ownerName: string;
+  address: string;
+  phone: string;
+  email: string;
+  licenseNumber: string;
+  website: string;
+}
+
+export interface AppSettings {
+  business: BusinessProfile;
+  googleClientId: string;
+  defaultLaborRate: number;
+  defaultMarkup: number;
+  nextInvoiceNumber: number;
+}
+
+export const DEFAULT_SETTINGS: AppSettings = {
+  business: {
+    companyName: '',
+    ownerName: '',
+    address: '',
+    phone: '',
+    email: '',
+    licenseNumber: '',
+    website: '',
+  },
+  googleClientId: '',
+  defaultLaborRate: 85,
+  defaultMarkup: 20,
+  nextInvoiceNumber: 1001,
+};
 
 export const JOB_STATUS_LABELS: Record<JobStatus, string> = {
   prospect: 'Prospect',
