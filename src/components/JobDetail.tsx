@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Trash2, User, MapPin, Phone, Mail } from 'lucide-react';
+import { ArrowLeft, Trash2, User, MapPin, Phone, Mail, Users } from 'lucide-react';
 import type { Job, JobStatus } from '../types';
 import { JOB_STATUS_LABELS, JOB_STATUS_COLORS } from '../types';
 import type { useJobStore } from '../store';
@@ -9,6 +9,11 @@ import ScheduleTab from './ScheduleTab';
 import InvoiceTab from './InvoiceTab';
 import PhotosTab from './PhotosTab';
 import SafetyTab from './SafetyTab';
+import TimeTrackingTab from './TimeTrackingTab';
+import ExpenseTab from './ExpenseTab';
+import ChangeOrderTab from './ChangeOrderTab';
+import PnLTab from './PnLTab';
+import CustomerSelectModal from './CustomerSelectModal';
 import { calcBidTotals, formatCurrency, formatDateTime } from '../utils';
 
 interface Props {
@@ -19,7 +24,7 @@ interface Props {
   onDeleted: () => void;
 }
 
-type Tab = 'scope' | 'bid' | 'schedule' | 'invoice' | 'photos' | 'safety';
+type Tab = 'scope' | 'bid' | 'change-orders' | 'schedule' | 'time' | 'expenses' | 'pnl' | 'invoice' | 'photos' | 'safety';
 
 const STATUS_FLOW: JobStatus[] = [
   'prospect', 'scoped', 'bid_sent', 'accepted', 'scheduled', 'in_progress', 'completed', 'invoiced',
@@ -28,16 +33,37 @@ const STATUS_FLOW: JobStatus[] = [
 export default function JobDetail({ job, store, driveConnected, onBack, onDeleted }: Props) {
   const [tab, setTab] = useState<Tab>('scope');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
 
   const { total } = calcBidTotals(job);
 
   const safetyTotal = 42; // total NFPA 70E items
   const safetyDone = Object.values(job.safetyChecklist ?? {}).filter(Boolean).length;
 
+  const approvedCOCount = job.changeOrders.filter(co => co.status === 'approved').length;
+  const pendingCOCount = job.changeOrders.filter(co => co.status === 'pending').length;
+
   const tabs: { id: Tab; label: string; badge?: number; badgeColor?: string }[] = [
     { id: 'scope', label: 'Scope' },
     { id: 'bid', label: 'Bid' },
+    {
+      id: 'change-orders',
+      label: 'Change Orders',
+      badge: pendingCOCount > 0 ? pendingCOCount : approvedCOCount > 0 ? approvedCOCount : undefined,
+      badgeColor: pendingCOCount > 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700',
+    },
     { id: 'schedule', label: 'Schedule' },
+    {
+      id: 'time',
+      label: 'Time',
+      badge: job.timeEntries.length > 0 ? job.timeEntries.length : undefined,
+    },
+    {
+      id: 'expenses',
+      label: 'Expenses',
+      badge: job.expenses.length > 0 ? job.expenses.length : undefined,
+    },
+    { id: 'pnl', label: 'P&L' },
     { id: 'invoice', label: 'Invoice' },
     { id: 'photos', label: 'Photos', badge: job.photos.length || undefined },
     {
@@ -96,46 +122,58 @@ export default function JobDetail({ job, store, driveConnected, onBack, onDelete
         )}
 
         {/* Customer Info */}
-        <div className="mt-4 grid sm:grid-cols-2 gap-3">
-          <div className="flex items-center gap-2">
-            <User size={15} className="text-slate-400 flex-shrink-0" />
-            <input
-              type="text"
-              value={job.customer.name}
-              onChange={e => store.updateJob(job.id, { customer: { ...job.customer, name: e.target.value } })}
-              placeholder="Customer name"
-              className="flex-1 text-sm px-2 py-1.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+        <div className="mt-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-slate-500 font-medium uppercase tracking-wide">Customer</span>
+            <button
+              onClick={() => setShowCustomerModal(true)}
+              className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 transition-colors"
+            >
+              <Users size={12} />
+              Pick Customer
+            </button>
           </div>
-          <div className="flex items-center gap-2">
-            <Phone size={15} className="text-slate-400 flex-shrink-0" />
-            <input
-              type="tel"
-              value={job.customer.phone}
-              onChange={e => store.updateJob(job.id, { customer: { ...job.customer, phone: e.target.value } })}
-              placeholder="Phone"
-              className="flex-1 text-sm px-2 py-1.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <Mail size={15} className="text-slate-400 flex-shrink-0" />
-            <input
-              type="email"
-              value={job.customer.email}
-              onChange={e => store.updateJob(job.id, { customer: { ...job.customer, email: e.target.value } })}
-              placeholder="Email"
-              className="flex-1 text-sm px-2 py-1.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <MapPin size={15} className="text-slate-400 flex-shrink-0" />
-            <input
-              type="text"
-              value={job.customer.address}
-              onChange={e => store.updateJob(job.id, { customer: { ...job.customer, address: e.target.value } })}
-              placeholder="Job site address"
-              className="flex-1 text-sm px-2 py-1.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div className="flex items-center gap-2">
+              <User size={15} className="text-slate-400 flex-shrink-0" />
+              <input
+                type="text"
+                value={job.customer.name}
+                onChange={e => store.updateJob(job.id, { customer: { ...job.customer, name: e.target.value } })}
+                placeholder="Customer name"
+                className="flex-1 text-sm px-2 py-1.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Phone size={15} className="text-slate-400 flex-shrink-0" />
+              <input
+                type="tel"
+                value={job.customer.phone}
+                onChange={e => store.updateJob(job.id, { customer: { ...job.customer, phone: e.target.value } })}
+                placeholder="Phone"
+                className="flex-1 text-sm px-2 py-1.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Mail size={15} className="text-slate-400 flex-shrink-0" />
+              <input
+                type="email"
+                value={job.customer.email}
+                onChange={e => store.updateJob(job.id, { customer: { ...job.customer, email: e.target.value } })}
+                placeholder="Email"
+                className="flex-1 text-sm px-2 py-1.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <MapPin size={15} className="text-slate-400 flex-shrink-0" />
+              <input
+                type="text"
+                value={job.customer.address}
+                onChange={e => store.updateJob(job.id, { customer: { ...job.customer, address: e.target.value } })}
+                placeholder="Job site address"
+                className="flex-1 text-sm px-2 py-1.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
           </div>
         </div>
 
@@ -187,6 +225,10 @@ export default function JobDetail({ job, store, driveConnected, onBack, onDelete
         />
       )}
 
+      {tab === 'change-orders' && (
+        <ChangeOrderTab job={job} store={store} />
+      )}
+
       {tab === 'schedule' && (
         <ScheduleTab
           job={job}
@@ -194,6 +236,18 @@ export default function JobDetail({ job, store, driveConnected, onBack, onDelete
           onUpdateEntry={(id, changes) => store.updateScheduleEntry(job.id, id, changes)}
           onRemoveEntry={id => store.removeScheduleEntry(job.id, id)}
         />
+      )}
+
+      {tab === 'time' && (
+        <TimeTrackingTab job={job} store={store} />
+      )}
+
+      {tab === 'expenses' && (
+        <ExpenseTab job={job} store={store} />
+      )}
+
+      {tab === 'pnl' && (
+        <PnLTab job={job} laborRate={store.settings.defaultLaborRate} />
       )}
 
       {tab === 'invoice' && (
@@ -247,6 +301,25 @@ export default function JobDetail({ job, store, driveConnected, onBack, onDelete
             </div>
           </div>
         </div>
+      )}
+
+      {/* Customer Select Modal */}
+      {showCustomerModal && (
+        <CustomerSelectModal
+          customers={store.customers}
+          onSelect={c => {
+            store.updateJob(job.id, {
+              customer: {
+                name: c.name,
+                phone: c.phone,
+                email: c.email,
+                address: c.address,
+              },
+            });
+            setShowCustomerModal(false);
+          }}
+          onClose={() => setShowCustomerModal(false)}
+        />
       )}
     </div>
   );

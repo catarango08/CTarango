@@ -1,4 +1,4 @@
-import { Briefcase, DollarSign, Calendar, TrendingUp } from 'lucide-react';
+import { Briefcase, DollarSign, Calendar, TrendingUp, Clock, Receipt } from 'lucide-react';
 import type { Job, JobStatus } from '../types';
 import { JOB_STATUS_LABELS, JOB_STATUS_COLORS } from '../types';
 import { calcBidTotals, formatCurrency } from '../utils';
@@ -7,6 +7,21 @@ interface Props {
   jobs: Job[];
   onSelectJob: (id: string) => void;
   onNewJob: () => void;
+}
+
+function getWeekStart(): Date {
+  const d = new Date();
+  const day = d.getDay(); // 0=Sun
+  d.setDate(d.getDate() - day);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function getMonthStart(): Date {
+  const d = new Date();
+  d.setDate(1);
+  d.setHours(0, 0, 0, 0);
+  return d;
 }
 
 export default function Dashboard({ jobs, onSelectJob, onNewJob }: Props) {
@@ -30,10 +45,30 @@ export default function Dashboard({ jobs, onSelectJob, onNewJob }: Props) {
 
   const pipeline: JobStatus[] = ['prospect', 'scoped', 'bid_sent', 'accepted', 'scheduled', 'in_progress'];
 
+  // Total actual hours this week (completed time entries)
+  const weekStart = getWeekStart();
+  const hoursThisWeek = jobs.reduce((total, job) => {
+    return total + job.timeEntries
+      .filter(e => e.clockOut !== null && new Date(e.clockIn) >= weekStart)
+      .reduce((sum, e) => {
+        const ms = new Date(e.clockOut!).getTime() - new Date(e.clockIn).getTime();
+        return sum + ms / 1000 / 3600;
+      }, 0);
+  }, 0);
+
+  // Total expenses this month
+  const monthStart = getMonthStart();
+  const monthStartStr = monthStart.toISOString().split('T')[0];
+  const expensesThisMonth = jobs.reduce((total, job) => {
+    return total + job.expenses
+      .filter(e => e.date >= monthStartStr)
+      .reduce((sum, e) => sum + e.amount, 0);
+  }, 0);
+
   return (
     <div className="space-y-6">
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <StatCard
           icon={<Briefcase size={20} />}
           label="Active Jobs"
@@ -61,6 +96,20 @@ export default function Dashboard({ jobs, onSelectJob, onNewJob }: Props) {
           value={String(jobs.length)}
           color="text-orange-600"
           bg="bg-orange-50"
+        />
+        <StatCard
+          icon={<Clock size={20} />}
+          label="Hours This Week"
+          value={`${hoursThisWeek.toFixed(1)}h`}
+          color="text-teal-600"
+          bg="bg-teal-50"
+        />
+        <StatCard
+          icon={<Receipt size={20} />}
+          label="Expenses This Month"
+          value={formatCurrency(expensesThisMonth)}
+          color="text-rose-600"
+          bg="bg-rose-50"
         />
       </div>
 

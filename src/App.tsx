@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   Zap, LayoutDashboard, Briefcase, CalendarDays, Menu, X,
   Settings, CloudIcon, CloudOff, Loader2, CheckCircle2, AlertCircle,
+  Users, Calculator,
 } from 'lucide-react';
 import { useJobStore } from './store';
 import Dashboard from './components/Dashboard';
@@ -9,10 +10,14 @@ import JobList from './components/JobList';
 import JobDetail from './components/JobDetail';
 import CalendarView from './components/CalendarView';
 import SettingsModal from './components/SettingsModal';
+import CustomerDB from './components/CustomerDB';
+import Calculators from './components/Calculators';
+import NewJobModal from './components/NewJobModal';
+import { JOB_TEMPLATES, applyTemplate } from './data/jobTemplates';
 import * as drive from './lib/drive';
 import './index.css';
 
-type View = 'dashboard' | 'jobs' | 'calendar' | 'job-detail';
+type View = 'dashboard' | 'jobs' | 'calendar' | 'job-detail' | 'customers' | 'calculators';
 
 type SyncState = 'idle' | 'syncing' | 'success' | 'error';
 
@@ -22,6 +27,7 @@ export default function App() {
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showNewJobModal, setShowNewJobModal] = useState(false);
   const [driveConnected, setDriveConnected] = useState(drive.isConnected());
   const [syncState, setSyncState] = useState<SyncState>('idle');
   const [syncError, setSyncError] = useState('');
@@ -35,7 +41,35 @@ export default function App() {
   }
 
   function createNewJob() {
+    setShowNewJobModal(true);
+    setMobileNavOpen(false);
+  }
+
+  function handleSelectBlank() {
     const job = store.createJob({ title: '' });
+    setShowNewJobModal(false);
+    openJob(job.id);
+  }
+
+  function handleSelectTemplate(templateId: string) {
+    const template = JOB_TEMPLATES.find(t => t.id === templateId);
+    if (!template) return;
+    const applied = applyTemplate(template);
+    const job = store.createJob({
+      title: applied.title,
+      scopeDescription: applied.scopeDescription,
+      scopeItems: applied.scopeItems,
+      materials: applied.materials,
+      bid: {
+        laborRate: store.settings.defaultLaborRate,
+        laborHours: applied.bid.laborHours,
+        materialMarkup: store.settings.defaultMarkup,
+        notes: '',
+        status: 'draft',
+        sentAt: null,
+      },
+    });
+    setShowNewJobModal(false);
     openJob(job.id);
   }
 
@@ -93,6 +127,8 @@ export default function App() {
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
     { id: 'jobs', label: 'Jobs', icon: <Briefcase size={18} /> },
     { id: 'calendar', label: 'Calendar', icon: <CalendarDays size={18} /> },
+    { id: 'customers', label: 'Customers', icon: <Users size={18} /> },
+    { id: 'calculators', label: 'Calculators', icon: <Calculator size={18} /> },
   ];
 
   return (
@@ -115,7 +151,7 @@ export default function App() {
               <button
                 key={item.id}
                 onClick={() => navigate(item.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   view === item.id || (view === 'job-detail' && item.id === 'jobs')
                     ? 'bg-blue-50 text-blue-700'
                     : 'text-slate-600 hover:bg-slate-100'
@@ -271,6 +307,24 @@ export default function App() {
           </div>
         )}
 
+        {view === 'customers' && (
+          <div>
+            <h1 className="text-2xl font-bold text-slate-800 mb-6">Customers</h1>
+            <CustomerDB
+              store={store}
+              jobs={store.jobs}
+              onSelectJob={id => openJob(id)}
+            />
+          </div>
+        )}
+
+        {view === 'calculators' && (
+          <div>
+            <h1 className="text-2xl font-bold text-slate-800 mb-6">NEC Field Calculators</h1>
+            <Calculators />
+          </div>
+        )}
+
         {view === 'job-detail' && selectedJob && (
           <JobDetail
             job={selectedJob}
@@ -303,6 +357,14 @@ export default function App() {
           onClose={() => setShowSettings(false)}
           onDriveConnect={handleDriveConnect}
           onDriveDisconnect={handleDriveDisconnect}
+        />
+      )}
+
+      {showNewJobModal && (
+        <NewJobModal
+          onSelectBlank={handleSelectBlank}
+          onSelectTemplate={handleSelectTemplate}
+          onClose={() => setShowNewJobModal(false)}
         />
       )}
     </div>
