@@ -1,0 +1,78 @@
+homeassistant:
+  name: Tarango Home
+  unit_system: imperial
+  temperature_unit: F
+  time_zone: America/Chicago
+  currency: USD
+  country: US
+  latitude: 29.4241
+  longitude: -98.4936
+  elevation: 198
+
+http:
+  cors_allowed_origins:
+    - http://localhost:3000
+    - http://127.0.0.1:3000
+  use_x_forwarded_for: true
+  trusted_proxies:
+    - 127.0.0.1
+    - 192.168.0.0/16
+    - 172.16.0.0/12
+    - 10.0.0.0/8
+
+default_config:
+
+logger:
+  default: info
+
+automation: !include automations.yaml
+scene: !include scenes.yaml
+script: !include scripts.yaml
+
+template:
+  - sensor:
+      - name: "Family Home Status"
+        state: >
+          {% set people_home = states.person | selectattr('state', 'eq', 'home') | list | count %}
+          {% set total = states.person | list | count %}
+          {{ people_home }}/{{ total }} home
+        attributes:
+          people_home: >
+            {{ states.person | selectattr('state', 'eq', 'home') | map(attribute='name') | list }}
+
+input_boolean:
+  guest_mode:
+    name: Guest Mode
+    icon: mdi:account-group
+  vacation_mode:
+    name: Vacation Mode
+    icon: mdi:airplane
+  kids_bedtime:
+    name: Kids Bedtime
+    icon: mdi:weather-night
+
+input_number:
+  thermostat_home_temp:
+    name: Home Temperature
+    min: 60
+    max: 85
+    step: 1
+    unit_of_measurement: "°F"
+    icon: mdi:thermometer
+    initial: 72
+  thermostat_away_temp:
+    name: Away Temperature
+    min: 60
+    max: 85
+    step: 1
+    unit_of_measurement: "°F"
+    icon: mdi:thermometer
+    initial: 78
+  thermostat_sleep_temp:
+    name: Sleep Temperature
+    min: 60
+    max: 85
+    step: 1
+    unit_of_measurement: "°F"
+    icon: mdi:thermometer
+    initial: 70

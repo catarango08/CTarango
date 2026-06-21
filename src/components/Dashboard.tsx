@@ -6,6 +6,8 @@ import { WeatherWidget } from "@/components/widgets/WeatherWidget";
 import { CalendarWidget } from "@/components/widgets/CalendarWidget";
 import { ChoresWidget } from "@/components/widgets/ChoresWidget";
 import { SmartHomeWidget } from "@/components/widgets/SmartHomeWidget";
+import { QuickActions } from "@/components/widgets/QuickActions";
+import { ConnectionStatus } from "@/components/widgets/ConnectionStatus";
 import {
   familyMembers,
   calendarEvents,
@@ -25,11 +27,14 @@ export function Dashboard() {
           <CalendarWidget events={calendarEvents} members={familyMembers} />
           <ChoresWidget chores={chores} members={familyMembers} />
           <SmartHomeWidget devices={smartDevices} scenes={automationScenes} />
+          <QuickActions />
         </WidgetGrid>
       </main>
-      <footer className="px-4 py-3 text-center text-xs text-zinc-400 dark:text-zinc-600 sm:px-6">
-        Family Command Center &middot; Home Assistant{" "}
-        {process.env.NEXT_PUBLIC_HA_URL ? "Connected" : "Demo Mode"}
+      <footer className="flex items-center justify-center gap-3 px-4 py-3 sm:px-6">
+        <span className="text-xs text-zinc-400 dark:text-zinc-600">
+          Family Command Center
+        </span>
+        <ConnectionStatus />
       </footer>
     </div>
   );

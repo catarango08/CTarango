@@ -1,0 +1,36 @@
+# ==============================
+# Helper Scripts
+# ==============================
+
+all_lights_off:
+  alias: "All Lights Off"
+  description: "Turn off every light in the house"
+  sequence:
+    - service: light.turn_off
+      target:
+        entity_id: all
+
+lock_all_doors:
+  alias: "Lock All Doors"
+  description: "Lock every lock in the house"
+  sequence:
+    - service: lock.lock
+      target:
+        entity_id: all
+
+panic_mode:
+  alias: "Panic Mode"
+  description: "Lock everything, turn on all lights, send alert"
+  sequence:
+    - service: lock.lock
+      target:
+        entity_id: all
+    - service: light.turn_on
+      target:
+        entity_id: all
+      data:
+        brightness: 255
+    - service: notify.notify
+      data:
+        title: "ALERT"
+        message: "Panic mode activated at the Tarango home!"
