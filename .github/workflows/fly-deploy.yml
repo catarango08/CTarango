@@ -1,0 +1,30 @@
+# Auto-deploy to Fly.io on every push to master (e.g. when a PR is merged).
+#
+# Setup (one time):
+#   1. Create a deploy token:   fly tokens create deploy -x 999999h
+#   2. Add it as a GitHub repo secret named FLY_API_TOKEN
+#      (Settings → Secrets and variables → Actions → New repository secret)
+#
+# This workflow only runs on master, so it does not gate pull requests.
+name: Deploy to Fly.io
+
+on:
+  push:
+    branches:
+      - master
+
+# Never run two deploys at once; cancel the older one in flight.
+concurrency:
+  group: fly-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy app
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

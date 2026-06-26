@@ -83,6 +83,20 @@ fly deploy
 (`auto_stop_machines`) and starts on the next request. Open the URL on your
 phone and **Add to Home Screen** for an app-like icon.
 
+### Continuous deployment (auto-deploy on merge)
+
+`.github/workflows/fly-deploy.yml` deploys to Fly automatically on every push to
+`master`. Enable it once:
+
+```bash
+fly tokens create deploy -x 999999h   # print a long-lived deploy token
+```
+
+Add that token as a GitHub repository secret named **`FLY_API_TOKEN`**
+(Settings → Secrets and variables → Actions). After that, merging a PR to
+`master` ships the change. The workflow runs only on `master`, so it doesn't
+gate pull requests.
+
 For a production build:
 
 ```bash
