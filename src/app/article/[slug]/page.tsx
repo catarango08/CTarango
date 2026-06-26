@@ -45,6 +45,17 @@ export default function ArticlePage({ params }: { params: { slug: string } }) {
           ))}
         </div>
       )}
+
+      <Link href={`/quiz/${article.category_slug}`} className="quiz-cta">
+        <span className="quiz-cta-icon" aria-hidden>
+          ✓
+        </span>
+        <span>
+          <strong>Test yourself on {article.category_name}</strong>
+          <br />
+          Take the practice quiz for this topic.
+        </span>
+      </Link>
     </article>
   );
 }

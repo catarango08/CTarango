@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { getCategories } from "@/lib/db";
 import { SearchBar } from "@/components/SearchBar";
+import { getTotalQuestionCount } from "@/lib/quiz";
 
 export default function HomePage() {
   const categories = getCategories();
+  const quizCount = getTotalQuestionCount();
 
   return (
     <>
@@ -16,6 +18,19 @@ export default function HomePage() {
         </p>
         <SearchBar />
       </section>
+
+      <Link href="/quiz" className="quiz-banner">
+        <span className="quiz-banner-icon" aria-hidden>
+          ✓
+        </span>
+        <span>
+          <strong>Studying for the exam?</strong> Take a practice quiz —{" "}
+          {quizCount} exam-style questions across every topic.
+        </span>
+        <span className="quiz-banner-arrow" aria-hidden>
+          →
+        </span>
+      </Link>
 
       <h2 className="section-title">Browse by topic</h2>
       <div className="card-grid">

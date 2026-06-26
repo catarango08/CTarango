@@ -24,6 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </Link>
             <nav className="site-nav">
               <Link href="/">Browse</Link>
+              <Link href="/quiz">Quizzes</Link>
               <Link href="/search">Search</Link>
             </nav>
           </div>

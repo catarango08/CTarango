@@ -14,7 +14,11 @@ load/voltage-drop calculations, and electrical safe work practices.
 - **Browse by topic** — articles organized into eight categories.
 - **Full-text search** — SQLite FTS5 with prefix matching, relevance ranking
   (BM25), and highlighted result snippets.
-- Fast, server-rendered pages; articles and categories are statically generated.
+- **Practice quizzes** — exam-style multiple-choice questions by topic, with
+  instant feedback, a progress bar, scoring against the ~70% journeyman pass
+  line, and a link from each answer back to the source article.
+- Fast, server-rendered pages; articles, categories, and quizzes are statically
+  generated.
 
 ## Tech stack
 
@@ -50,14 +54,19 @@ src/
     search/page.tsx          # full-text search results
     category/[slug]/page.tsx # articles in a category
     article/[slug]/page.tsx  # a single article
+    quiz/page.tsx            # quiz topic picker
+    quiz/[slug]/page.tsx     # take a topic quiz
     layout.tsx, globals.css  # shell + styles
   components/
     SearchBar.tsx            # client-side search input
     Markdown.tsx             # minimal Markdown renderer for article bodies
+    QuizRunner.tsx           # interactive quiz (client component)
   data/
     articles.ts              # the knowledge base content (categories + articles)
+    quiz.ts                  # exam-style question bank
   lib/
     db.ts                    # SQLite connection, schema, FTS index, queries
+    quiz.ts                  # quiz query helpers
     seed.ts                  # `npm run seed` entry point
 ```
 
