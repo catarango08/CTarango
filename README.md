@@ -57,6 +57,32 @@ cp .env.example .env.local
 Without a key the rest of the app works normally; the troubleshooter returns a
 clear "not configured" message instead of crashing.
 
+## Deploying to Fly.io
+
+The repo ships a `Dockerfile` and `fly.toml`. Fly runs a normal container with a
+writable filesystem, so SQLite works out of the box — the knowledge base DB is
+regenerated from `src/data/articles.ts` at startup, so **no volume is needed**.
+
+```bash
+# one-time: install flyctl and sign in
+#   https://fly.io/docs/flyctl/install/
+fly auth login
+
+# first deploy — pick a unique app name and region when prompted
+fly launch            # detects the Dockerfile + fly.toml; say no to extra DBs
+
+# set the troubleshooter key as a secret (optional but recommended)
+fly secrets set ANTHROPIC_API_KEY=sk-ant-...
+
+# subsequent deploys
+fly deploy
+```
+
+`fly launch` builds the image on Fly's remote builders and gives you a public
+`https://<app>.fly.dev` URL. The machine scales to zero when idle
+(`auto_stop_machines`) and starts on the next request. Open the URL on your
+phone and **Add to Home Screen** for an app-like icon.
+
 For a production build:
 
 ```bash
