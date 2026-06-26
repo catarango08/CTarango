@@ -1,11 +1,12 @@
-# Auto-deploy to Fly.io on every push to master (e.g. when a PR is merged).
+# Optional auto-deploy to Fly.io on every push to master (e.g. PR merge).
 #
-# Setup (one time):
-#   1. Create a deploy token:   fly tokens create deploy -x 999999h
+# This is a no-op unless a FLY_API_TOKEN repo secret is configured, so it is
+# safe to leave in place even if you deploy elsewhere (e.g. miget).
+#
+# To enable:
+#   1. fly tokens create deploy -x 999999h
 #   2. Add it as a GitHub repo secret named FLY_API_TOKEN
 #      (Settings → Secrets and variables → Actions → New repository secret)
-#
-# This workflow only runs on master, so it does not gate pull requests.
 name: Deploy to Fly.io
 
 on:
@@ -13,7 +14,6 @@ on:
     branches:
       - master
 
-# Never run two deploys at once; cancel the older one in flight.
 concurrency:
   group: fly-deploy
   cancel-in-progress: true
@@ -24,7 +24,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: superfly/flyctl-actions/setup-flyctl@master
-      - run: flyctl deploy --remote-only
+      - name: Check for Fly token
+        id: gate
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          if [ -n "$FLY_API_TOKEN" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "FLY_API_TOKEN not set — skipping Fly deploy."
+          fi
+      - if: steps.gate.outputs.enabled == 'true'
+        uses: superfly/flyctl-actions/setup-flyctl@master
+      - if: steps.gate.outputs.enabled == 'true'
+        run: flyctl deploy --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

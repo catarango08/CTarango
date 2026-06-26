@@ -57,6 +57,25 @@ cp .env.example .env.local
 Without a key the rest of the app works normally; the troubleshooter returns a
 clear "not configured" message instead of crashing.
 
+## Deploying to miget
+
+The app runs on [miget](https://miget.com) from the included `Dockerfile`.
+
+1. **Builder type:** in the miget app settings, set the Builder Type to
+   **Dockerfile** (miget defaults to auto-detect buildpacks; selecting Dockerfile
+   uses the tuned multi-stage build in this repo, which compiles the
+   `better-sqlite3` native addon).
+2. **Port:** nothing to configure — the container binds miget's injected `PORT`
+   automatically (falling back to 3000 locally).
+3. **Environment variables:** add `ANTHROPIC_API_KEY` to enable the AI
+   Troubleshooter (the rest of the app works without it).
+4. Deploy. The knowledge base DB regenerates from `src/data/articles.ts` on each
+   boot, so no persistent volume is needed.
+
+> The auto-detect buildpack also works (it runs `npm run build` then `npm start`,
+> and `better-sqlite3` installs from prebuilt binaries), but the Dockerfile path
+> is the most deterministic.
+
 ## Deploying to Fly.io
 
 The repo ships a `Dockerfile` and `fly.toml`. Fly runs a normal container with a

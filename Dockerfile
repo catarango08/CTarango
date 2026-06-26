@@ -21,7 +21,6 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV PORT=3000
 
 # Run as a non-root user.
 RUN addgroup --system --gid 1001 nodejs \
@@ -39,4 +38,6 @@ RUN mkdir -p data && chown -R nextjs:nodejs /app
 USER nextjs
 
 EXPOSE 3000
-CMD ["./node_modules/.bin/next", "start", "-H", "0.0.0.0", "-p", "3000"]
+# Bind 0.0.0.0 and honor the platform-injected PORT (miget, Fly, etc.);
+# fall back to 3000 for local runs. Shell form so ${PORT} expands; exec for signals.
+CMD ["sh", "-c", "exec ./node_modules/.bin/next start -H 0.0.0.0 -p ${PORT:-3000}"]
