@@ -759,11 +759,144 @@ a:hover {
   color: var(--text-dim);
 }
 
+/* Nav badge for saved count */
+.nav-badge {
+  display: inline-block;
+  margin-left: 6px;
+  min-width: 18px;
+  padding: 0 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  color: #1a1205;
+  background: var(--accent);
+  border-radius: 999px;
+}
+
+/* Article header row with bookmark button */
+.article-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.article-head h1 {
+  margin: 6px 0 8px;
+}
+
+/* Bookmark button */
+.bookmark-btn {
+  flex: none;
+  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: var(--bg-elev);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.bookmark-btn:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.bookmark-btn.saved {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(245, 166, 35, 0.12);
+}
+
+/* Related articles */
+.related {
+  margin-top: 36px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.related-title {
+  font-size: 1.15rem;
+  margin: 16px 0 14px;
+}
+.related-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+.related-list a {
+  display: block;
+  height: 100%;
+  padding: 14px 16px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+}
+.related-list a:hover {
+  border-color: var(--accent);
+  text-decoration: none;
+}
+.related-meta {
+  display: block;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+.related-name {
+  display: block;
+  font-weight: 600;
+  color: var(--link);
+  margin-bottom: 4px;
+}
+.related-summary {
+  display: block;
+  font-size: 0.86rem;
+  color: var(--text-dim);
+}
+
+/* Bookmarks page rows */
+.bookmark-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.bookmark-row .article-link {
+  flex: 1;
+}
+.bookmark-remove {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-elev);
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.bookmark-remove:hover {
+  border-color: #f85149;
+  color: #f85149;
+}
+
 @media (max-width: 560px) {
   .hero h1 {
     font-size: 1.6rem;
   }
   .searchbar {
     flex-direction: column;
+  }
+  .article-head {
+    flex-direction: column;
+    gap: 4px;
   }
 }

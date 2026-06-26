@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
+import { BookmarksNavLink } from "@/components/BookmarksNavLink";
 
 export const metadata: Metadata = {
   title: "Wireman KB — Journeyman Electrician Knowledge Base",
@@ -27,6 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/troubleshoot">Troubleshoot</Link>
               <Link href="/quiz">Quizzes</Link>
               <Link href="/search">Search</Link>
+              <BookmarksNavLink />
             </nav>
           </div>
         </header>

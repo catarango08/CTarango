@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getAllArticleSlugs, getArticle } from "@/lib/db";
+import { getAllArticleSlugs, getArticle, getRelatedArticles } from "@/lib/db";
 import { Markdown } from "@/components/Markdown";
+import { BookmarkButton } from "@/components/BookmarkButton";
 
 export function generateStaticParams() {
   return getAllArticleSlugs().map((slug) => ({ slug }));
@@ -24,6 +25,8 @@ export default function ArticlePage({ params }: { params: { slug: string } }) {
     .map((t) => t.trim())
     .filter(Boolean);
 
+  const related = getRelatedArticles(article.slug);
+
   return (
     <article className="article">
       <p className="breadcrumb">
@@ -31,7 +34,15 @@ export default function ArticlePage({ params }: { params: { slug: string } }) {
         <Link href={`/category/${article.category_slug}`}>{article.category_name}</Link>
       </p>
 
-      <h1>{article.title}</h1>
+      <div className="article-head">
+        <h1>{article.title}</h1>
+        <BookmarkButton
+          slug={article.slug}
+          title={article.title}
+          summary={article.summary}
+          category={article.category_name}
+        />
+      </div>
       <p className="summary">{article.summary}</p>
 
       <Markdown source={article.body} />
@@ -44,6 +55,23 @@ export default function ArticlePage({ params }: { params: { slug: string } }) {
             </span>
           ))}
         </div>
+      )}
+
+      {related.length > 0 && (
+        <section className="related">
+          <h2 className="related-title">Related articles</h2>
+          <ul className="related-list">
+            {related.map((r) => (
+              <li key={r.slug}>
+                <Link href={`/article/${r.slug}`}>
+                  <span className="related-meta">{r.category_name}</span>
+                  <span className="related-name">{r.title}</span>
+                  <span className="related-summary">{r.summary}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       <Link href={`/quiz/${article.category_slug}`} className="quiz-cta">

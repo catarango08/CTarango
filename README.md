@@ -21,6 +21,10 @@ load/voltage-drop calculations, and electrical safe work practices.
   diagnoses electrical problems step by step, leads with electrical-safety
   practice (de-energize, LOTO, verify dead), cites NEC articles, and points back
   to the knowledge base. Requires an `ANTHROPIC_API_KEY` (see below).
+- **Related articles** — every article cross-links to related ones, ranked by
+  shared tags and category, so you can follow a topic across the KB.
+- **Bookmarks** — save articles for quick reference; stored client-side in the
+  browser (localStorage), with a live count in the header and a Saved page.
 - Fast, server-rendered pages; articles, categories, and quizzes are statically
   generated.
 
@@ -76,19 +80,24 @@ src/
     quiz/[slug]/page.tsx     # take a topic quiz
     troubleshoot/page.tsx    # AI troubleshooter page
     api/troubleshoot/route.ts# streaming Claude endpoint (Node runtime)
+    bookmarks/page.tsx       # saved articles page
     layout.tsx, globals.css  # shell + styles
   components/
     SearchBar.tsx            # client-side search input
     Markdown.tsx             # minimal Markdown renderer for article bodies
     QuizRunner.tsx           # interactive quiz (client component)
     Troubleshooter.tsx       # streaming chat UI (client component)
+    BookmarkButton.tsx       # save/unsave toggle on articles
+    BookmarksList.tsx        # saved-articles list (Saved page)
+    BookmarksNavLink.tsx     # header Saved link with live count
   data/
     articles.ts              # the knowledge base content (categories + articles)
     quiz.ts                  # exam-style question bank
   lib/
-    db.ts                    # SQLite connection, schema, FTS index, queries
+    db.ts                    # SQLite connection, schema, FTS index, related, queries
     quiz.ts                  # quiz query helpers
     kbContext.ts             # KB catalog injected into the troubleshooter prompt
+    bookmarks.ts             # localStorage bookmark hook + helpers
     seed.ts                  # `npm run seed` entry point
 ```
 

@@ -135,6 +135,44 @@ export type ArticleRow = {
 
 export type CategoryWithCount = Category & { count: number };
 
+export type RelatedArticle = {
+  slug: string;
+  title: string;
+  category_name: string;
+  summary: string;
+};
+
+/**
+ * Articles related to `slug`, ranked by shared tags (weighted) plus a bonus for
+ * sharing a category. Computed from the in-memory content (no SQL needed).
+ */
+export function getRelatedArticles(slug: string, limit = 4): RelatedArticle[] {
+  const target = articles.find((a) => a.slug === slug);
+  if (!target) return [];
+
+  const categoryName = (s: string) =>
+    categories.find((c) => c.slug === s)?.name ?? s;
+  const targetTags = new Set(target.tags);
+
+  const scored = articles
+    .filter((a) => a.slug !== slug)
+    .map((a) => {
+      const sharedTags = a.tags.filter((t) => targetTags.has(t)).length;
+      const sameCategory = a.categorySlug === target.categorySlug ? 1 : 0;
+      return { a, score: sharedTags * 2 + sameCategory };
+    })
+    .filter((x) => x.score > 0)
+    .sort((x, y) => y.score - x.score)
+    .slice(0, limit);
+
+  return scored.map(({ a }) => ({
+    slug: a.slug,
+    title: a.title,
+    category_name: categoryName(a.categorySlug),
+    summary: a.summary,
+  }));
+}
+
 export type SearchHit = {
   slug: string;
   title: string;
