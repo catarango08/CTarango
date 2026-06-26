@@ -19,6 +19,19 @@ export default function HomePage() {
         <SearchBar />
       </section>
 
+      <Link href="/troubleshoot" className="quiz-banner ts-banner">
+        <span className="quiz-banner-icon ts-banner-icon" aria-hidden>
+          ⚡
+        </span>
+        <span>
+          <strong>Stuck on a problem in the field?</strong> Ask the AI Troubleshooter —
+          diagnose breaker trips, dead circuits, motor faults, and more, step by step.
+        </span>
+        <span className="quiz-banner-arrow" aria-hidden>
+          →
+        </span>
+      </Link>
+
       <Link href="/quiz" className="quiz-banner">
         <span className="quiz-banner-icon" aria-hidden>
           ✓

@@ -580,6 +580,185 @@ a:hover {
   justify-content: center;
 }
 
+/* Troubleshooter home banner accent (blue tint to differ from quiz amber) */
+.ts-banner {
+  background: linear-gradient(
+    100deg,
+    rgba(111, 179, 255, 0.16),
+    rgba(111, 179, 255, 0.05)
+  );
+  border-left-color: var(--link);
+}
+.ts-banner:hover {
+  border-color: var(--link);
+}
+.ts-banner-icon {
+  background: var(--link);
+  color: #04162e;
+}
+.ts-banner .quiz-banner-arrow {
+  color: var(--link);
+}
+
+/* Troubleshooter chat */
+.ts {
+  max-width: 760px;
+  display: flex;
+  flex-direction: column;
+}
+.ts-thread {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elev);
+  padding: 18px;
+  min-height: 340px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.ts-welcome p {
+  color: var(--text-dim);
+  margin: 0 0 16px;
+}
+.ts-starters {
+  display: grid;
+  gap: 10px;
+}
+.ts-starter {
+  text-align: left;
+  padding: 12px 14px;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 0.92rem;
+  cursor: pointer;
+}
+.ts-starter:hover {
+  border-color: var(--link);
+}
+
+.ts-msg {
+  margin-bottom: 20px;
+}
+.ts-msg:last-child {
+  margin-bottom: 4px;
+}
+.ts-msg-role {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+.ts-msg-user .ts-msg-role {
+  color: var(--link);
+}
+.ts-msg-assistant .ts-msg-role {
+  color: var(--accent);
+}
+.ts-msg-body {
+  font-size: 0.96rem;
+}
+.ts-msg-body p {
+  margin: 0 0 10px;
+}
+.ts-msg-body ul,
+.ts-msg-body ol {
+  margin: 0 0 10px;
+  padding-left: 22px;
+}
+.ts-msg-body li {
+  margin-bottom: 4px;
+}
+.ts-msg-body h3 {
+  font-size: 1rem;
+  margin: 14px 0 6px;
+  color: var(--accent-2);
+}
+.ts-msg-body code {
+  background: var(--bg-elev-2);
+  padding: 1px 6px;
+  border-radius: 5px;
+  font-size: 0.9em;
+}
+.ts-msg-user .ts-msg-body {
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+}
+
+/* Typing indicator */
+.ts-typing {
+  display: inline-flex;
+  gap: 5px;
+  padding: 6px 0;
+}
+.ts-typing span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  animation: ts-bounce 1.2s infinite ease-in-out;
+}
+.ts-typing span:nth-child(2) {
+  animation-delay: 0.18s;
+}
+.ts-typing span:nth-child(3) {
+  animation-delay: 0.36s;
+}
+@keyframes ts-bounce {
+  0%, 80%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  40% {
+    transform: translateY(-5px);
+    opacity: 1;
+  }
+}
+
+.ts-input {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+.ts-input textarea {
+  flex: 1;
+  resize: vertical;
+  padding: 12px 14px;
+  font-size: 1rem;
+  font-family: inherit;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+}
+.ts-input textarea:focus {
+  outline: none;
+  border-color: var(--link);
+}
+.ts-input button {
+  align-self: stretch;
+  padding: 0 22px;
+  font-size: 1rem;
+  font-weight: 600;
+  background: var(--link);
+  color: #04162e;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.ts-input button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.ts-disclaimer {
+  margin: 12px 0 40px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
 @media (max-width: 560px) {
   .hero h1 {
     font-size: 1.6rem;
