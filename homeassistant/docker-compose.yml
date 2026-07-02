@@ -1,5 +1,14 @@
 version: "3.8"
 
+# Runs on Brittany's MacBook Pro (always-on home server)
+# Local path on that machine: ~/Tarango/Home Assistant/
+# That same folder is visible on the network as:
+#   smb://Brittany's MacBook Pro._smb._tcp.local/Tarango/Home Assistant
+#
+# To start:  docker compose up -d
+# To stop:   docker compose down
+# To update: docker compose pull && docker compose up -d
+
 services:
   homeassistant:
     container_name: homeassistant
