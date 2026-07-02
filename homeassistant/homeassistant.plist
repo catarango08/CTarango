@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.tarango.homeassistant</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <!-- Full path to hass inside the venv — update username if not brittany -->
+        <string>/Users/brittany/Tarango/Home Assistant/venv/bin/hass</string>
+        <string>--config</string>
+        <string>/Users/brittany/Tarango/Home Assistant/config</string>
+        <string>--log-file</string>
+        <string>/Users/brittany/Tarango/Home Assistant/logs/homeassistant.log</string>
+    </array>
+
+    <!-- Start automatically when the user logs in -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!-- Restart automatically if HA crashes -->
+    <key>KeepAlive</key>
+    <true/>
+
+    <!-- Wait 10 seconds before restarting on crash (prevents rapid restart loops) -->
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+
+    <key>StandardOutPath</key>
+    <string>/Users/brittany/Tarango/Home Assistant/logs/launchd.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/brittany/Tarango/Home Assistant/logs/launchd-error.log</string>
+
+    <!-- Give HA time to shut down gracefully -->
+    <key>ExitTimeOut</key>
+    <integer>60</integer>
+</dict>
+</plist>
