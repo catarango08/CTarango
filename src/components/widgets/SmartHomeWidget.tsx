@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import type { SmartDevice, AutomationScene } from "@/lib/types";
@@ -19,48 +19,83 @@ const sceneIcons: Record<string, string> = {
   moon: "🌙",
   film: "🎬",
   shield: "🛡️",
+  scene: "⚙️",
 };
 
-interface SmartHomeWidgetProps {
-  devices: SmartDevice[];
-  scenes: AutomationScene[];
-}
-
-export function SmartHomeWidget({ devices: initialDevices, scenes }: SmartHomeWidgetProps) {
-  const [devices, setDevices] = useState(initialDevices);
+export function SmartHomeWidget() {
+  const [devices, setDevices] = useState<SmartDevice[]>([]);
+  const [scenes, setScenes] = useState<AutomationScene[]>([]);
+  const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"devices" | "scenes">("devices");
   const [activeScene, setActiveScene] = useState<string | null>(null);
 
-  const rooms = [...new Set(devices.map((d) => d.room))];
-  const activeCount = devices.filter(
-    (d) => d.state === "on" || d.state === "locked" || d.state === "cooling"
-  ).length;
+  useEffect(() => {
+    fetch("/api/homeassistant")
+      .then((res) => res.json())
+      .then((data) => {
+        setDevices(data.devices ?? []);
+        setScenes(data.scenes ?? []);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
 
-  function handleToggle(deviceId: string) {
+  async function handleToggle(deviceId: string) {
     setDevices((prev) =>
       prev.map((d) => {
         if (d.id !== deviceId) return d;
-        const toggled = { ...d };
+        const next = { ...d };
         if (d.type === "light" || d.type === "switch") {
-          toggled.state = d.state === "on" ? "off" : "on";
+          next.state = d.state === "on" ? "off" : "on";
         } else if (d.type === "lock") {
-          toggled.state = d.state === "locked" ? "unlocked" : "locked";
+          next.state = d.state === "locked" ? "unlocked" : "locked";
         }
-        return toggled;
+        return next;
       })
     );
+
+    try {
+      const res = await fetch("/api/homeassistant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "toggle", deviceId }),
+      });
+      const data = await res.json();
+      if (data.device) {
+        setDevices((prev) => prev.map((d) => (d.id === deviceId ? data.device : d)));
+      }
+    } catch (e) {
+      console.error("Toggle failed:", e);
+    }
   }
 
-  function handleScene(sceneId: string) {
+  async function handleScene(sceneId: string) {
     setActiveScene(sceneId);
+    try {
+      await fetch("/api/homeassistant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "scene", sceneId }),
+      });
+    } catch (e) {
+      console.error("Scene failed:", e);
+    }
     setTimeout(() => setActiveScene(null), 2000);
   }
+
+  const rooms = [...new Set(devices.map((d) => d.room))];
+  const allUnknown = rooms.length === 1 && rooms[0] === "Unknown";
+  const activeCount = devices.filter(
+    (d) => d.state === "on" || d.state === "locked" || d.state === "cooling"
+  ).length;
 
   return (
     <Card className="xl:row-span-2">
       <CardHeader>
         <CardTitle>Smart Home</CardTitle>
-        <span className="text-xs text-zinc-400">{activeCount} active</span>
+        <span className="text-xs text-zinc-400">
+          {loading ? "Loading…" : `${activeCount} active`}
+        </span>
       </CardHeader>
 
       <div className="mb-4 flex gap-1.5">
@@ -86,26 +121,60 @@ export function SmartHomeWidget({ devices: initialDevices, scenes }: SmartHomeWi
         </button>
       </div>
 
-      {view === "devices" ? (
-        <div className="space-y-4 max-h-[380px] overflow-y-auto pr-1">
-          {rooms.map((room) => (
-            <div key={room}>
-              <p className="mb-2 text-xs font-semibold uppercase text-zinc-400 dark:text-zinc-500">
-                {room}
-              </p>
+      {loading ? (
+        <div className="flex items-center justify-center py-12 text-sm text-zinc-400">
+          Loading devices…
+        </div>
+      ) : view === "devices" ? (
+        devices.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+            <span className="text-3xl">🏠</span>
+            <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">No devices yet</p>
+            <p className="text-xs text-zinc-400 dark:text-zinc-500">
+              Add devices in Home Assistant to see them here
+            </p>
+          </div>
+        ) : (
+          <div className="max-h-[380px] space-y-4 overflow-y-auto pr-1">
+            {allUnknown ? (
               <div className="grid grid-cols-2 gap-2">
-                {devices
-                  .filter((d) => d.room === room)
-                  .map((device) => (
-                    <DeviceCard
-                      key={device.id}
-                      device={device}
-                      onToggle={() => handleToggle(device.id)}
-                    />
-                  ))}
+                {devices.map((device) => (
+                  <DeviceCard
+                    key={device.id}
+                    device={device}
+                    onToggle={() => handleToggle(device.id)}
+                  />
+                ))}
               </div>
-            </div>
-          ))}
+            ) : (
+              rooms.map((room) => (
+                <div key={room}>
+                  <p className="mb-2 text-xs font-semibold uppercase text-zinc-400 dark:text-zinc-500">
+                    {room}
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {devices
+                      .filter((d) => d.room === room)
+                      .map((device) => (
+                        <DeviceCard
+                          key={device.id}
+                          device={device}
+                          onToggle={() => handleToggle(device.id)}
+                        />
+                      ))}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )
+      ) : scenes.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+          <span className="text-3xl">🎬</span>
+          <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">No scenes yet</p>
+          <p className="text-xs text-zinc-400 dark:text-zinc-500">
+            Create scenes in Home Assistant to run them here
+          </p>
         </div>
       ) : (
         <div className="space-y-2">

@@ -13,8 +13,6 @@ import {
   calendarEvents,
   chores,
   weatherData,
-  smartDevices,
-  automationScenes,
 } from "@/lib/mock-data";
 
 export function Dashboard() {
@@ -26,7 +24,7 @@ export function Dashboard() {
           <WeatherWidget data={weatherData} />
           <CalendarWidget events={calendarEvents} members={familyMembers} />
           <ChoresWidget chores={chores} members={familyMembers} />
-          <SmartHomeWidget devices={smartDevices} scenes={automationScenes} />
+          <SmartHomeWidget />
           <QuickActions />
         </WidgetGrid>
       </main>

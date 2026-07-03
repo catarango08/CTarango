@@ -48,11 +48,19 @@ export async function toggleDevice(deviceId: string): Promise<SmartDevice> {
     return toggled;
   }
 
-  const domain = device.type === "thermostat" ? "climate" : device.type;
-  await haFetch(`/services/${domain}/toggle`, {
-    method: "POST",
-    body: JSON.stringify({ entity_id: deviceId }),
-  });
+  if (device.type === "lock") {
+    const service = device.state === "locked" ? "unlock" : "lock";
+    await haFetch(`/services/lock/${service}`, {
+      method: "POST",
+      body: JSON.stringify({ entity_id: deviceId }),
+    });
+  } else {
+    const domain = device.type === "thermostat" ? "climate" : device.type;
+    await haFetch(`/services/${domain}/toggle`, {
+      method: "POST",
+      body: JSON.stringify({ entity_id: deviceId }),
+    });
+  }
 
   const updated = await haFetch(`/states/${deviceId}`);
   return mapHAStateToDevice(updated);
