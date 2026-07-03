@@ -112,8 +112,18 @@ export const chores: Chore[] = [
   { id: "c8", title: "Make beds", assigneeId: "3", dueDate: today, completed: true, recurring: "daily", points: 2 },
 ];
 
-const days = ["Sun", "Mon", "Tue", "Wed", "Thu"];
-const dayIndex = new Date().getDay();
+function forecastDays(count: number): string[] {
+  const names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  return Array.from({ length: count }, (_, i) => {
+    if (i === 0) return "Today";
+    if (i === 1) return "Tomorrow";
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    return names[d.getDay()];
+  });
+}
+
+const fDays = forecastDays(5);
 
 export const weatherData: WeatherData = {
   location: "San Antonio, TX",
@@ -126,11 +136,11 @@ export const weatherData: WeatherData = {
     windSpeed: 8,
   },
   forecast: [
-    { day: days[dayIndex % 7] || "Today", high: 89, low: 72, description: "Partly Cloudy", icon: "partly-cloudy", precipitation: 10 },
-    { day: "Tomorrow", high: 91, low: 74, description: "Sunny", icon: "sunny", precipitation: 0 },
-    { day: "Wed", high: 85, low: 70, description: "Thunderstorms", icon: "storm", precipitation: 80 },
-    { day: "Thu", high: 83, low: 68, description: "Rainy", icon: "rain", precipitation: 60 },
-    { day: "Fri", high: 88, low: 71, description: "Sunny", icon: "sunny", precipitation: 5 },
+    { day: fDays[0], high: 89, low: 72, description: "Partly Cloudy", icon: "partly-cloudy", precipitation: 10 },
+    { day: fDays[1], high: 91, low: 74, description: "Sunny", icon: "sunny", precipitation: 0 },
+    { day: fDays[2], high: 85, low: 70, description: "Thunderstorms", icon: "storm", precipitation: 80 },
+    { day: fDays[3], high: 83, low: 68, description: "Rainy", icon: "rain", precipitation: 60 },
+    { day: fDays[4], high: 88, low: 71, description: "Sunny", icon: "sunny", precipitation: 5 },
   ],
 };
 

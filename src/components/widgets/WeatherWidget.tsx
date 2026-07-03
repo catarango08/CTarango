@@ -43,8 +43,8 @@ export function WeatherWidget({ data }: WeatherWidgetProps) {
       </div>
 
       <div className="grid grid-cols-5 gap-2 border-t border-zinc-100 pt-4 dark:border-zinc-800">
-        {data.forecast.map((day) => (
-          <div key={day.day} className="flex flex-col items-center gap-1 text-center">
+        {data.forecast.map((day, i) => (
+          <div key={i} className="flex flex-col items-center gap-1 text-center">
             <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
               {day.day}
             </span>
