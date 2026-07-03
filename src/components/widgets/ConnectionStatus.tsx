@@ -4,22 +4,13 @@ import { useState, useEffect } from "react";
 
 export function ConnectionStatus() {
   const [status, setStatus] = useState<"checking" | "connected" | "demo">("checking");
-  const haUrl = process.env.NEXT_PUBLIC_HA_URL;
 
   useEffect(() => {
-    if (!haUrl) {
-      setStatus("demo");
-      return;
-    }
-
-    fetch(`${haUrl}/api/`, {
-      headers: {
-        Authorization: `Bearer ${process.env.NEXT_PUBLIC_HA_TOKEN || ""}`,
-      },
-    })
-      .then((res) => setStatus(res.ok ? "connected" : "demo"))
+    fetch("/api/ha-status")
+      .then((res) => res.json())
+      .then((data) => setStatus(data.connected ? "connected" : "demo"))
       .catch(() => setStatus("demo"));
-  }, [haUrl]);
+  }, []);
 
   if (status === "checking") return null;
 
