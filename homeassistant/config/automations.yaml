@@ -1,0 +1,178 @@
+# ==============================
+# Family Command Center Automations
+# ==============================
+# Replace entity IDs with your actual devices after setup.
+# Uncomment automations as you add matching devices.
+
+# --- Morning Routine ---
+- id: auto_morning_weekday
+  alias: "Weekday Morning Routine"
+  description: "Lights on and thermostat adjustment on weekday mornings"
+  mode: single
+  trigger:
+    - platform: time
+      at: "06:30:00"
+  condition:
+    - condition: time
+      weekday:
+        - mon
+        - tue
+        - wed
+        - thu
+        - fri
+    - condition: state
+      entity_id: input_boolean.vacation_mode
+      state: "off"
+  action:
+    - service: scene.turn_on
+      target:
+        entity_id: scene.good_morning
+    - service: notify.notify
+      data:
+        title: "Good Morning!"
+        message: "Rise and shine, Tarango family!"
+
+# --- Bedtime for Kids ---
+- id: auto_kids_bedtime
+  alias: "Kids Bedtime"
+  description: "Dim kids room lights and notify at bedtime"
+  mode: single
+  trigger:
+    - platform: time
+      at: "20:30:00"
+  condition:
+    - condition: time
+      weekday:
+        - sun
+        - mon
+        - tue
+        - wed
+        - thu
+  action:
+    - service: input_boolean.turn_on
+      target:
+        entity_id: input_boolean.kids_bedtime
+    - service: light.turn_on
+      target:
+        entity_id: light.kids_room
+      data:
+        brightness: 30
+        color_temp: 450
+    - delay: "00:30:00"
+    - service: light.turn_off
+      target:
+        entity_id: light.kids_room
+
+# --- Everyone Left Home ---
+- id: auto_away_mode
+  alias: "Auto Away Mode"
+  description: "Activate away mode when no one is home"
+  mode: single
+  trigger:
+    - platform: state
+      entity_id: zone.home
+      to: "0"
+  condition:
+    - condition: state
+      entity_id: input_boolean.guest_mode
+      state: "off"
+  action:
+    - service: scene.turn_on
+      target:
+        entity_id: scene.away_mode
+    - service: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.kids_bedtime
+
+# --- Someone Arrived Home ---
+- id: auto_welcome_home
+  alias: "Welcome Home"
+  description: "Turn on lights when someone arrives"
+  mode: single
+  trigger:
+    - platform: state
+      entity_id: zone.home
+      from: "0"
+  action:
+    - service: scene.turn_on
+      target:
+        entity_id: scene.good_morning
+
+# --- Sunset Porch Light ---
+- id: auto_porch_light_sunset
+  alias: "Porch Light at Sunset"
+  description: "Turn on porch light at sunset"
+  mode: single
+  trigger:
+    - platform: sun
+      event: sunset
+      offset: "-00:15:00"
+  action:
+    - service: light.turn_on
+      target:
+        entity_id: light.porch
+      data:
+        brightness: 255
+
+# --- Sunrise Porch Light Off ---
+- id: auto_porch_light_sunrise
+  alias: "Porch Light Off at Sunrise"
+  description: "Turn off porch light at sunrise"
+  mode: single
+  trigger:
+    - platform: sun
+      event: sunrise
+      offset: "00:15:00"
+  action:
+    - service: light.turn_off
+      target:
+        entity_id: light.porch
+
+# --- Front Door Unlocked Too Long ---
+- id: auto_door_unlocked_alert
+  alias: "Front Door Unlocked Alert"
+  description: "Notify if front door is unlocked for more than 10 minutes"
+  mode: single
+  trigger:
+    - platform: state
+      entity_id: lock.front_door
+      to: "unlocked"
+      for: "00:10:00"
+  action:
+    - service: notify.notify
+      data:
+        title: "Security Alert"
+        message: "Front door has been unlocked for 10 minutes!"
+
+# --- Thermostat Schedule ---
+- id: auto_thermostat_day
+  alias: "Daytime Thermostat"
+  description: "Set thermostat to daytime temp"
+  mode: single
+  trigger:
+    - platform: time
+      at: "07:00:00"
+  condition:
+    - condition: state
+      entity_id: input_boolean.vacation_mode
+      state: "off"
+  action:
+    - service: climate.set_temperature
+      target:
+        entity_id: climate.thermostat
+      data:
+        temperature: "{{ states('input_number.thermostat_home_temp') | int }}"
+
+- id: auto_thermostat_night
+  alias: "Nighttime Thermostat"
+  description: "Set thermostat to sleep temp"
+  mode: single
+  trigger:
+    - platform: time
+      at: "22:00:00"
+  action:
+    - service: climate.set_temperature
+      target:
+        entity_id: climate.thermostat
+      data:
+        temperature: "{{ states('input_number.thermostat_sleep_temp') | int }}"

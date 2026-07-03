@@ -1,0 +1,77 @@
+# ==============================
+# Family Command Center Scenes
+# ==============================
+# These match the scenes in the dashboard app.
+# Update entity_id values to match YOUR actual devices after setup.
+
+- id: good_morning
+  name: Good Morning
+  icon: mdi:weather-sunset-up
+  entities:
+    # Replace these entity IDs with your actual devices
+    light.living_room:
+      state: "on"
+      brightness: 200
+      color_temp: 350
+    light.kitchen:
+      state: "on"
+      brightness: 255
+    # lock.front_door:
+    #   state: unlocked
+    # climate.thermostat:
+    #   state: cool
+    #   temperature: 72
+
+- id: good_night
+  name: Good Night
+  icon: mdi:weather-night
+  entities:
+    light.living_room:
+      state: "off"
+    light.kitchen:
+      state: "off"
+    light.kids_room:
+      state: "off"
+    light.porch:
+      state: "off"
+    # lock.front_door:
+    #   state: locked
+    # lock.back_door:
+    #   state: locked
+    # climate.thermostat:
+    #   state: cool
+    #   temperature: 70
+
+- id: movie_time
+  name: Movie Time
+  icon: mdi:movie-open
+  entities:
+    light.living_room:
+      state: "on"
+      brightness: 30
+      color_temp: 450
+    light.kitchen:
+      state: "off"
+    light.kids_room:
+      state: "off"
+
+- id: away_mode
+  name: Away Mode
+  icon: mdi:shield-home
+  entities:
+    light.living_room:
+      state: "off"
+    light.kitchen:
+      state: "off"
+    light.kids_room:
+      state: "off"
+    light.porch:
+      state: "on"
+      brightness: 255
+    # lock.front_door:
+    #   state: locked
+    # lock.back_door:
+    #   state: locked
+    # climate.thermostat:
+    #   state: cool
+    #   temperature: 78
