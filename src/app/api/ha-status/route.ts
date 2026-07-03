@@ -5,7 +5,12 @@ export async function GET() {
   const haToken = process.env.NEXT_PUBLIC_HA_TOKEN;
 
   if (!haUrl || !haToken) {
-    return NextResponse.json({ connected: false });
+    return NextResponse.json({
+      connected: false,
+      reason: "missing config",
+      hasUrl: !!haUrl,
+      hasToken: !!haToken,
+    });
   }
 
   try {
@@ -13,8 +18,8 @@ export async function GET() {
       headers: { Authorization: `Bearer ${haToken}` },
       signal: AbortSignal.timeout(5000),
     });
-    return NextResponse.json({ connected: res.ok });
-  } catch {
-    return NextResponse.json({ connected: false });
+    return NextResponse.json({ connected: res.ok, status: res.status });
+  } catch (e) {
+    return NextResponse.json({ connected: false, error: String(e) });
   }
 }
