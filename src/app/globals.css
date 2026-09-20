@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #0b0f16;
+  --panel: #111823;
+  --panel-2: #161f2c;
+  --line: #1f2a3a;
+  --text: #e6edf6;
+  --muted: #8fa1b8;
+  --accent: #f7c948;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .panel {
+    @apply rounded-xl border border-[color:var(--line)] bg-[color:var(--panel)];
+  }
+  .panel-2 {
+    @apply rounded-lg border border-[color:var(--line)] bg-[color:var(--panel-2)];
+  }
+  .label {
+    @apply text-[11px] font-semibold uppercase tracking-wider text-[color:var(--muted)];
+  }
+  .link {
+    @apply text-volt-300 underline-offset-2 hover:underline;
+  }
+  .btn {
+    @apply inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--line)] bg-[color:var(--panel-2)] px-3 py-1.5 text-sm font-medium text-[color:var(--text)] transition hover:border-volt-500/60 hover:text-volt-200;
+  }
+  .btn-primary {
+    @apply inline-flex items-center gap-1.5 rounded-lg bg-volt-400 px-3 py-1.5 text-sm font-semibold text-slate-950 transition hover:bg-volt-300;
+  }
+  .input {
+    @apply w-full rounded-lg border border-[color:var(--line)] bg-[color:var(--bg)] px-3 py-2 text-sm text-[color:var(--text)] outline-none transition placeholder:text-[color:var(--muted)] focus:border-volt-500;
+  }
+  .th {
+    @apply whitespace-nowrap px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-[color:var(--muted)];
+  }
+  .td {
+    @apply px-3 py-2.5 text-sm align-top;
+  }
+  .chip {
+    @apply inline-flex items-center rounded-md border border-[color:var(--line)] bg-[color:var(--panel-2)] px-1.5 py-0.5 text-xs text-[color:var(--muted)];
+  }
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #223046; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #2d3f5b; }
