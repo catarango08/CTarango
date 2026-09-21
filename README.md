@@ -32,6 +32,8 @@ Three rules of the business are enforced by the software rather than by memory:
 | **Jobs** | The pipeline board by status, or a table. Red towns show no price |
 | **Job ticket** | Play button, closeout checklist, photos by stage, the call, money, hours |
 | **Photos** | Every before / panel / after, and which jobs are still short |
+| **On-site intake** | Arrival stamp, then photos grouped Before / Service entry / Panel / Other, and room to write down what you found |
+| **Truck stock** | What is on the van, what is below minimum, and what the supply run costs |
 | **Rate book** | The 41 published rows with their `Assumes` scope, plus a quote builder |
 | **Hours to license** | Install hours toward 12,000, by source, with affidavit gaps called out |
 | **Customers, Territory, Referrals, Keep Power, Permit offices** | The reference tables, worked rather than browsed |
@@ -91,7 +93,7 @@ see [`docs/BRAND.md`](docs/BRAND.md) for the ratios and the full do-not-print li
 ```
 src/proxy.ts        the passcode gate (Next 16 renamed this convention from middleware)
 src/lib/schema/     the 9 Notion databases, with their exact property names
-src/lib/domain/     rules, gates, playbook, quote math — the business, in one place
+src/lib/domain/     rules, gates, playbook, quote, forecast, materials — the business, in one place
 src/lib/notion/     REST client, property mapper, file uploads, id registry
 src/lib/store/      Store interface: Notion-backed, plus in-memory sample data
 src/app/            the screens

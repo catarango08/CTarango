@@ -5,6 +5,7 @@ import { num, relationIds } from './calc';
 import { daysUntil, startOfDay, toDate } from './format';
 import { LICENSE } from './domain/rules';
 import { closeoutStatus, gateTown } from './domain/gates';
+import { restockList, type RestockLine } from './domain/materials';
 
 /* ------------------------------------------------------------------ *
  * Fetching + relation label hydration
@@ -82,14 +83,16 @@ export interface Today {
   newCalls: RecordValue[];
   hours: { logged: number; target: number; remaining: number; selfPerformed: number; thisMonth: number; unverified: number };
   money: { quotedOpen: number; unpaid: number; collectedThisMonth: number };
-  counts: { openJobs: number; greenTowns: number; equipmentDue: number };
+  counts: { openJobs: number; greenTowns: number; equipmentDue: number; restockLines: number; outOfStock: number };
   alerts: Alert[];
 }
 
 export async function loadToday(): Promise<Today> {
-  const [jobs, photos, hourRows, territory, equipment] = await Promise.all([
+  const [jobs, photos, hourRows, territory, equipment, truck] = await Promise.all([
     loadAll('jobs'), loadAll('jobPhotos'), loadAll('hourLedger'), loadAll('territory'), loadAll('equipment'),
+    loadAll('truckInventory'),
   ]);
+  const restock = restockList(truck);
 
   const terminal = new Set<string>(TERMINAL_STATUSES);
   const open = jobs.filter((j) => !terminal.has(String(j.status)));
@@ -152,8 +155,10 @@ export async function loadToday(): Promise<Today> {
       openJobs: open.length,
       greenTowns: territory.filter((t) => String(t.status) === 'GO').length,
       equipmentDue: equipment.filter((e) => (daysUntil(e.nextService) ?? 999) <= 30).length,
+      restockLines: restock.length,
+      outOfStock: restock.filter((r) => r.out).length,
     },
-    alerts: buildAlerts({ jobs, open, photos, territory, equipment, hourRows }),
+    alerts: buildAlerts({ jobs, open, photos, territory, equipment, hourRows, restock }),
   };
 }
 
@@ -164,6 +169,7 @@ function buildAlerts(input: {
   territory: RecordValue[];
   equipment: RecordValue[];
   hourRows: RecordValue[];
+  restock: RestockLine[];
 }): Alert[] {
   const alerts: Alert[] = [];
 
@@ -209,6 +215,24 @@ function buildAlerts(input: {
         href: '/equipment',
       });
     }
+  }
+
+  // Running out mid-job costs a trip and an apology, so it leads the list.
+  const out = input.restock.filter((r) => r.out);
+  if (out.length) {
+    alerts.push({
+      severity: 'stop',
+      title: `Out on the truck: ${out.slice(0, 3).map((r) => String(r.item.name)).join(', ')}${out.length > 3 ? `, +${out.length - 3}` : ''}`,
+      detail: 'Pick these up before the next call, not during it.',
+      href: '/truck',
+    });
+  } else if (input.restock.length) {
+    alerts.push({
+      severity: 'watch',
+      title: `${input.restock.length} items at or below the minimum on the truck`,
+      detail: 'Worth a supply run before they run out.',
+      href: '/truck',
+    });
   }
 
   const unverified = input.hourRows.filter((h) => !h.affidavit).reduce((s, h) => s + num(h.installHours), 0);

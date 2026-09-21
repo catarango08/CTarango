@@ -3,6 +3,8 @@ import { hydrate, loadToday } from '@/lib/data';
 import { Card, Empty, PageHeader, Stat, StatusPill } from '@/components/ui';
 import { Tagline } from '@/components/brand';
 import { nextMove } from '@/lib/domain/playbook';
+import { formatMinutes, planJob } from '@/lib/domain/forecast';
+import { loadAll } from '@/lib/data';
 import { BUSINESS, HARD_LINES, LICENSE } from '@/lib/domain/rules';
 import { date, money, number, relativeDays } from '@/lib/format';
 import { num } from '@/lib/calc';
@@ -11,10 +13,11 @@ export const dynamic = 'force-dynamic';
 
 export default async function TodayPage() {
   const today = await loadToday();
-  const [onDeck, hanging, needsCloseout] = await Promise.all([
+  const [onDeck, hanging, needsCloseout, allJobs] = await Promise.all([
     hydrate('jobs', today.onDeck),
     hydrate('jobs', today.hanging),
     hydrate('jobs', today.needsCloseout),
+    loadAll('jobs'),
   ]);
 
   const pct = Math.min(100, (today.hours.logged / today.hours.target) * 100);
@@ -83,6 +86,10 @@ export default async function TodayPage() {
                     <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-[color:var(--ink-muted)]">
                       <span className="chip">{String(job.town ?? '—')}</span>
                       {job.window ? <span className="chip">{String(job.window)}</span> : null}
+                      <span className="chip">
+                        {formatMinutes(planJob(job, allJobs).travelOneWay.minutes)} out ·{' '}
+                        {formatMinutes(planJob(job, allJobs).onSite.minutes)} on site
+                      </span>
                       {job.phone ? (
                         <a href={`tel:${String(job.phone).replace(/[^\d+]/g, '')}`} className="chip hover:border-[color:var(--accent)] hover:text-[color:var(--accent-ink)]">
                           {String(job.phone)}

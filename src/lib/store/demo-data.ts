@@ -131,6 +131,9 @@ export function buildDemoData(): Record<string, RecordValue[]> {
       source: 'HVAC referral', town: 'Dallas Co', permit: 'None', address: '1880 S Muleshoe Trail', phone: '417-555-0142',
       window: 'Today 8–10 AM', callIn: day(-2), onSite: day(0), amount: 550, installHours: 0, driveHours: 0,
       nextAction: 'Pull the pressure switch cover and meter the run.', notes: 'Well house 180 ft off the panel. Direct burial suspect.',
+      estHours: 3, estTravelMin: 22, arrived: at(0, 8, 12),
+      siteConditions: 'Gate code 4412. Two dogs, friendly. Well house is 180 ft behind the shop, no light in there — bring the work light. Panel is a Homeline 100A in the utility room.',
+      diagnosis: 'No voltage at the pressure switch. 240V present at the breaker, so the fault is in the run. Direct burial, no conduit, crosses the drive where he had a trencher in last spring.',
       signed: false, depositIn: false, paid: false, closeoutDone: false, reviewAsked: false, magnets: false, photos: false, hiddenDamage: false,
       customer: [{ id: cust.hollis }], hourEntries: [], hoursLogged: 0, play: 'Invoice it',
     },
@@ -147,6 +150,13 @@ export function buildDemoData(): Record<string, RecordValue[]> {
       source: 'Repeat', town: 'Polk Co', permit: 'None', address: '4402 Hwy 32', phone: '417-555-0188',
       window: 'Thu all day', callIn: day(-9), onSite: day(-4), amount: 1285, installHours: 6.5, driveHours: 1.25,
       nextAction: 'Collect. Net 15 written on the invoice.', notes: 'Net 15 — established farm account.',
+      estHours: 6, estTravelMin: 34, arrived: at(-4, 8, 5), departed: at(-4, 15, 20),
+      siteConditions: 'Shop panel has room. Dryer pad is 40 ft off the shop wall, clear run.',
+      diagnosis: 'No disconnect within sight of the dryer. Existing whip was undersized and heat-damaged at the fitting.',
+      workPerformed: 'Installed 60A fused disconnect within sight of the unit, new liquidtight whip, re-terminated at the dryer. Torqued to 275 in-lb and marked.',
+      testResults: 'Phase A 241V, phase B 240V. Balanced at 1.2%. Megger 500V, >100 MΩ to ground.',
+      recommendations: 'Shop panel is full. If he adds the second dryer he will need a sub-panel — worth quoting this winter.',
+      signedBy: 'Hal Reeder', paymentMethod: 'Net 15',
       signed: true, depositIn: false, paid: false, closeoutDone: false, reviewAsked: false, magnets: true, photos: true, hiddenDamage: false,
       customer: [{ id: cust.reeder }], hourEntries: [], hoursLogged: 6.5, play: 'Run closeout',
     },
@@ -253,5 +263,57 @@ export function buildDemoData(): Record<string, RecordValue[]> {
     { id: id('permits'), name: 'Marshfield city hall', office: 'Marshfield', contact: 'City clerk', confirmed: '', feeNotes: 'Not confirmed yet.', permitTrigger: 'Call before the first Marshfield job' },
   ];
 
-  return { jobs, jobPhotos, customers, hourLedger, rateBook, territory, permits, referrals, equipment };
+  /* --- the van ------------------------------------------------------ */
+  const stock: [string, string, number, number, string, number, number, string][] = [
+    ['12/2 NM-B, 250 ft roll', 'Wire & Cable', 2, 2, 'roll', 142, 213, 'Bulk rack'],
+    ['14/2 NM-B, 250 ft roll', 'Wire & Cable', 1, 2, 'roll', 98, 152, 'Bulk rack'],
+    ['12/3 NM-B, 250 ft roll', 'Wire & Cable', 1, 1, 'roll', 196, 295, 'Bulk rack'],
+    ['6/3 NM-B, per ft', 'Wire & Cable', 60, 50, 'ft', 4.4, 7.4, 'Bulk rack'],
+    ['THHN #12 black, 500 ft', 'Wire & Cable', 1, 1, 'roll', 78, 118, 'Bulk rack'],
+    ['QO 20A 1-pole breaker', 'Breakers', 8, 6, 'ea', 11, 24, 'Bin A'],
+    ['QO 20A AFCI breaker', 'Breakers', 3, 4, 'ea', 48, 79, 'Bin A'],
+    ['QO 50A 2-pole breaker', 'Breakers', 1, 2, 'ea', 26, 52, 'Bin A'],
+    ['Homeline 20A 1-pole', 'Breakers', 6, 4, 'ea', 8, 19, 'Bin A'],
+    ['GFCI receptacle 20A TR', 'Devices', 9, 6, 'ea', 18.5, 39, 'Bin B'],
+    ['Receptacle 15A TR, white', 'Devices', 22, 12, 'ea', 1.4, 6, 'Bin B'],
+    ['Single-pole switch, white', 'Devices', 14, 10, 'ea', 1.6, 7, 'Bin B'],
+    ['3-way switch, white', 'Devices', 5, 4, 'ea', 3.2, 12, 'Bin B'],
+    ['NEMA 14-50 receptacle', 'Devices', 0, 1, 'ea', 86, 165, 'Bin C'],
+    ['4-square box, 2-1/8 deep', 'Boxes & Covers', 11, 8, 'ea', 2.1, 7, 'Bin D'],
+    ['Old-work box, 1-gang', 'Boxes & Covers', 18, 12, 'ea', 1.8, 6, 'Bin D'],
+    ['Weatherproof cover, 1-gang', 'Boxes & Covers', 3, 4, 'ea', 9, 22, 'Bin D'],
+    ['EMT 3/4 in, 10 ft', 'Conduit & Fittings', 6, 6, 'ea', 12.8, 24, 'Ladder rack'],
+    ['EMT connector 3/4 in', 'Conduit & Fittings', 20, 12, 'ea', 1.1, 4, 'Bin E'],
+    ['Liquidtight whip, 6 ft', 'Conduit & Fittings', 2, 2, 'ea', 28, 58, 'Bin E'],
+    ['LED retrofit can, 6 in', 'Lighting', 4, 4, 'ea', 16, 42, 'Shelf'],
+    ['Ground rod 5/8 x 8 ft', 'Grounding', 2, 2, 'ea', 21, 44, 'Ladder rack'],
+    ['Acorn clamp 5/8', 'Grounding', 7, 6, 'ea', 2.4, 8, 'Bin F'],
+    ['Wire nuts, assorted, 500 ct', 'Connectors & Terminals', 1, 1, 'box', 62, 110, 'Bin F'],
+    ['Wago 221 lever nuts, 100 ct', 'Connectors & Terminals', 2, 1, 'box', 34, 68, 'Bin F'],
+    ['Staples 1/2 in, 250 ct', 'Fasteners', 1, 1, 'box', 9, 20, 'Bin G'],
+    ['Wire labels, book', 'Consumables', 1, 1, 'ea', 14, 28, 'Bin G'],
+    ['Anti-ox compound', 'Consumables', 0, 1, 'ea', 12, 26, 'Bin G'],
+    ['Phase monitor relay', 'Specialty', 0, 1, 'ea', 132, 248, 'Bin C'],
+  ];
+
+  const truckInventory: RecordValue[] = stock.map(([name, category, onTruck, minOnTruck, unit, cost, sellPrice, bin]) => ({
+    id: id('truckInventory'), name, category, onTruck, minOnTruck, unit, cost, sellPrice, bin,
+    supplier: 'City Electric — Bolivar', notes: '',
+  }));
+
+  const byName = (n: string) => truckInventory.find((i) => i.name === n)!;
+
+  const jobMaterials: RecordValue[] = [
+    { id: id('jobMaterials'), name: 'GFCI receptacle 20A TR', job: [{ id: job.reederDryer }], item: [{ id: byName('GFCI receptacle 20A TR').id }], quantity: 2, unitCost: 18.5, extendedCost: 37, source: 'Truck stock', billable: true, pulledFromTruck: true, usedOn: day(-4), notes: '' },
+    { id: id('jobMaterials'), name: 'Liquidtight whip, 6 ft', job: [{ id: job.reederDryer }], item: [{ id: byName('Liquidtight whip, 6 ft').id }], quantity: 1, unitCost: 28, extendedCost: 28, source: 'Truck stock', billable: true, pulledFromTruck: true, usedOn: day(-4), notes: '' },
+    { id: id('jobMaterials'), name: '60A disconnect, fused', job: [{ id: job.reederDryer }], quantity: 1, unitCost: 118, extendedCost: 118, source: 'Supply house', billable: true, pulledFromTruck: false, usedOn: day(-4), notes: 'Picked up on the way out.' },
+    { id: id('jobMaterials'), name: 'QO 20A AFCI breaker', job: [{ id: job.hollisWell }], item: [{ id: byName('QO 20A AFCI breaker').id }], quantity: 1, unitCost: 48, extendedCost: 48, source: 'Truck stock', billable: true, pulledFromTruck: true, usedOn: day(0), notes: '' },
+    { id: id('jobMaterials'), name: '12/2 NM-B, 250 ft roll', job: [{ id: job.reederShop }], item: [{ id: byName('12/2 NM-B, 250 ft roll').id }], quantity: 1, unitCost: 142, extendedCost: 142, source: 'Truck stock', billable: true, pulledFromTruck: true, usedOn: day(-28), notes: '' },
+  ];
+
+  for (const j of jobs) {
+    j.materials = jobMaterials.filter((m) => (m.job as { id: string }[])?.[0]?.id === j.id).map((m) => ({ id: m.id }));
+  }
+
+  return { jobs, jobPhotos, customers, hourLedger, rateBook, territory, permits, referrals, equipment, truckInventory, jobMaterials };
 }
