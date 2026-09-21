@@ -1,9 +1,12 @@
 import { DATABASES } from './databases';
-import type { DbDef, DbGroup, DbKey, FieldDef } from './types';
+import type { DbDef, DbGroup, DbKey, FieldDef, FieldType } from './types';
 
 export * from './types';
 export { DATABASES } from './databases';
-export { JOB_STATUSES, JOB_PRIORITIES, JOB_TYPES, TRADE_SEGMENTS } from './databases';
+export {
+  JOB_STATUSES, TERMINAL_STATUSES, JOB_TYPES, LEAD_SOURCES, JOB_TOWNS,
+  PERMIT_STATES, TERRITORY_STATUSES, PHOTO_STAGES, REQUIRED_PHOTO_STAGES,
+} from './databases';
 
 const BY_KEY = new Map<DbKey, DbDef>(DATABASES.map((d) => [d.key, d as DbDef]));
 
@@ -41,21 +44,28 @@ export function columnsFor(db: DbDef): FieldDef[] {
   return cols.length ? cols : db.fields.slice(0, 5);
 }
 
+const COMPUTED: FieldType[] = ['created_time', 'last_edited_time', 'auto_number', 'rollup', 'formula'];
+
+/** Fields a human can actually set. Notion computes the rest. */
 export function editableFields(db: DbDef): FieldDef[] {
-  return db.fields.filter((f) => !f.derived && f.type !== 'created_time' && f.type !== 'last_edited_time');
+  return db.fields.filter((f) => !f.derived && !f.readOnly && !COMPUTED.includes(f.type));
+}
+
+/** Fields we never send on a write. */
+export function isWritable(field: FieldDef): boolean {
+  return !field.readOnly && !COMPUTED.includes(field.type);
 }
 
 export const GROUP_LABELS: Record<DbGroup, string> = {
-  crm: 'CRM',
-  operations: 'Operations',
+  field: 'Field work',
+  crm: 'Customers',
   money: 'Money',
-  workforce: 'Workforce',
-  supply: 'Supply Chain',
-  compliance: 'Compliance & Assets',
+  license: 'License file',
+  reference: 'Reference',
 };
 
 export function databasesByGroup(): { group: DbGroup; label: string; dbs: DbDef[] }[] {
-  const order: DbGroup[] = ['crm', 'operations', 'money', 'workforce', 'supply', 'compliance'];
+  const order: DbGroup[] = ['field', 'crm', 'money', 'license', 'reference'];
   return order.map((group) => ({
     group,
     label: GROUP_LABELS[group],
@@ -80,7 +90,7 @@ export function validateSchema(): string[] {
         if (!f.relation) problems.push(`${db.key}.${f.key}: relation field is missing a target`);
         else if (!BY_KEY.has(f.relation)) problems.push(`${db.key}.${f.key}: relation target "${f.relation}" does not exist`);
       }
-      if ((f.type === 'select' || f.type === 'multi_select') && (!f.options || f.options.length === 0)) {
+      if ((f.type === 'select' || f.type === 'multi_select') && !f.readOnly && (!f.options || f.options.length === 0)) {
         problems.push(`${db.key}.${f.key}: ${f.type} field has no options`);
       }
     }

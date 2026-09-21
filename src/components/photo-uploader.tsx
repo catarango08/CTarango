@@ -3,28 +3,24 @@
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
 
-const STAGES = [
-  'Before', 'During', 'After', 'Damage / Existing Condition', 'Code Violation',
-  'Equipment Label', 'Meter / Serial', 'Permit', 'Thermal Scan', 'Completion',
-];
+import { PHOTO_STAGES } from '@/lib/schema';
 
 export function PhotoUploader({
   jobId,
-  customerId,
-  propertyId,
+  stage: initialStage = 'Before',
   compact = false,
 }: {
   jobId?: string;
-  customerId?: string;
-  propertyId?: string;
+  /** Pre-select the stage when the screen already knows which one is missing. */
+  stage?: string;
   compact?: boolean;
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [stage, setStage] = useState('Before');
+  const [stage, setStage] = useState(initialStage);
   const [caption, setCaption] = useState('');
   const [location, setLocation] = useState('');
-  const [includeInReport, setIncludeInReport] = useState(true);
+  const [customerOk, setCustomerOk] = useState(true);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null);
 
@@ -41,10 +37,8 @@ export function PhotoUploader({
     form.append('stage', stage);
     if (caption) form.append('caption', caption);
     if (location) form.append('location', location);
-    form.append('includeInReport', String(includeInReport));
+    form.append('customerOk', String(customerOk));
     if (jobId) form.append('job', jobId);
-    if (customerId) form.append('customer', customerId);
-    if (propertyId) form.append('property', propertyId);
 
     setBusy(true);
     setMessage(null);
@@ -84,31 +78,31 @@ export function PhotoUploader({
             accept="image/*"
             capture="environment"
             multiple
-            className="mt-1 block w-full text-sm text-[color:var(--muted)] file:mr-3 file:rounded-md file:border-0 file:bg-volt-400 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-slate-950 hover:file:bg-volt-300"
+            className="mt-1 block w-full text-sm text-[color:var(--ink-muted)] file:mr-3 file:rounded-md file:border-0 file:bg-[color:var(--accent)] file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-[color:var(--on-accent)] hover:file:brightness-110"
           />
         </label>
         <label className="block">
           <span className="label">Stage</span>
           <select className="input mt-1" value={stage} onChange={(e) => setStage(e.target.value)}>
-            {STAGES.map((s) => (
+            {PHOTO_STAGES.map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
           </select>
         </label>
         <label className="block">
           <span className="label">Caption</span>
-          <input className="input mt-1" value={caption} onChange={(e) => setCaption(e.target.value)} placeholder="Existing panel, double-tapped breakers" />
+          <input className="input mt-1" value={caption} onChange={(e) => setCaption(e.target.value)} placeholder="Panel cover off, before" />
         </label>
         <label className="block">
           <span className="label">Where on site</span>
-          <input className="input mt-1" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Main panel, garage wall" />
+          <input className="input mt-1" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Main panel, north wall" />
         </label>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <label className="flex items-center gap-2 text-sm text-[color:var(--muted)]">
-          <input type="checkbox" checked={includeInReport} onChange={(e) => setIncludeInReport(e.target.checked)} className="accent-volt-400" />
-          Include in the customer report
+        <label className="flex items-center gap-2 text-sm text-[color:var(--ink-muted)]">
+          <input type="checkbox" checked={customerOk} onChange={(e) => setCustomerOk(e.target.checked)} className="accent-[color:var(--accent)]" />
+          Customer saw it and is OK with it
         </label>
         <button type="submit" className="btn-primary" disabled={busy}>
           {busy ? 'Uploading…' : 'Attach photos'}
@@ -116,10 +110,10 @@ export function PhotoUploader({
       </div>
 
       {message && (
-        <p className={`text-sm ${message.tone === 'ok' ? 'text-emerald-300' : 'text-rose-300'}`}>{message.text}</p>
+        <p className={`text-sm ${message.tone === 'ok' ? 'text-[color:var(--go)]' : 'text-[color:var(--hazard)]'}`}>{message.text}</p>
       )}
-      <p className="text-xs text-[color:var(--muted)]">
-        Files go straight into Notion storage (20 MB each) and land on the job, the customer and the location at once.
+      <p className="text-xs text-[color:var(--ink-muted)]">
+        Cover off / cover on. Files go straight into Notion storage, 20 MB each.
       </p>
     </form>
   );

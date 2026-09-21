@@ -31,6 +31,9 @@ const EXPECTED_NOTION_TYPE: Record<FieldDef['type'], string> = {
   files: 'files',
   created_time: 'created_time',
   last_edited_time: 'last_edited_time',
+  auto_number: 'unique_id',
+  rollup: 'rollup',
+  formula: 'formula',
 };
 
 async function main() {

@@ -57,7 +57,14 @@ export class DemoStore implements Store {
     const db = getDb(dbKey);
     const now = new Date().toISOString();
     const record: RecordValue = { id: `demo-${dbKey}-${++this.counter}-${Date.now()}`, createdTime: now, lastEditedTime: now };
-    for (const field of db.fields) record[field.key] = normalize(field, values[field.key]);
+    for (const field of db.fields) {
+      // Notion mints unique ids itself; stand in for it so demo mode matches.
+      if (field.type === 'auto_number') {
+        record[field.key] = `TE-${this.table(dbKey).length + 1}`;
+        continue;
+      }
+      record[field.key] = normalize(field, values[field.key]);
+    }
     this.table(dbKey).unshift(record);
     return record;
   }

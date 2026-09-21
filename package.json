@@ -1,8 +1,8 @@
 {
-  "name": "voltflow",
+  "name": "tarango-electric-field-desk",
   "version": "0.1.0",
   "private": true,
-  "description": "VoltFlow — field service management + CRM for electrical contractors, running on Notion as the database.",
+  "description": "Field desk for Tarango Electric \u2014 Bolivar, Missouri. Runs on the Tarango Electric OS in Notion.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "notion:bootstrap": "tsx scripts/bootstrap-notion.ts",
     "notion:verify": "tsx scripts/verify-notion.ts",
-    "notion:seed": "tsx scripts/seed-notion.ts"
+    "notion:seed": "tsx scripts/seed-notion.ts",
+    "brand:contrast": "node scripts/contrast.mjs"
   },
   "dependencies": {
     "clsx": "2.1.1",

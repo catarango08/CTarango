@@ -1,62 +1,89 @@
 import Link from 'next/link';
+import clsx from 'clsx';
 import { loadAll, loadHydrated } from '@/lib/data';
-import { Card, Chips, Empty, MoneyStat, PageHeader, Stat, StatusPill } from '@/components/ui';
-import { date, money, relativeDays } from '@/lib/format';
+import { getDb, getField } from '@/lib/schema';
+import { gateTown } from '@/lib/domain/gates';
+import { Card, Empty, PageHeader, Stat, StatusPill } from '@/components/ui';
+import { money } from '@/lib/format';
 import { num, relationIds } from '@/lib/calc';
-import type { RecordValue } from '@/lib/schema';
 
 export const dynamic = 'force-dynamic';
 
-export default async function CustomersPage({ searchParams }: { searchParams: Promise<{ q?: string; stage?: string; segment?: string }> }) {
-  const { q, stage, segment } = await searchParams;
-  const where = [
-    ...(stage ? [{ key: 'stage', op: 'equals' as const, value: stage }] : []),
-    ...(segment ? [{ key: 'segment', op: 'equals' as const, value: segment }] : []),
-  ];
+const customersDb = getDb('customers');
+const STAGE_OPTIONS = getField(customersDb, 'stage')?.options ?? [];
+const KIND_OPTIONS = getField(customersDb, 'kind')?.options ?? [];
 
-  const [customers, jobs, invoices, properties] = await Promise.all([
-    loadHydrated('customers', { where, search: q }),
+export default async function CustomersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; stage?: string; kind?: string }>;
+}) {
+  const { q, stage, kind } = await searchParams;
+
+  const [customers, jobs, territory] = await Promise.all([
+    loadHydrated('customers', {
+      where: [
+        ...(stage ? [{ key: 'stage', op: 'equals' as const, value: stage }] : []),
+        ...(kind ? [{ key: 'kind', op: 'equals' as const, value: kind }] : []),
+      ],
+      search: q,
+    }),
     loadAll('jobs'),
-    loadAll('invoices'),
-    loadAll('properties'),
+    loadAll('territory'),
   ]);
 
-  const jobCount = countBy(jobs, 'customer');
-  const siteCount = countBy(properties, 'customer');
-  const openBalance = sumBy(invoices, 'customer', (i) => num(i.balanceDue));
+  const jobsByCustomer = new Map<string, typeof jobs>();
+  for (const job of jobs) {
+    for (const id of relationIds(job.customer)) {
+      jobsByCustomer.set(id, [...(jobsByCustomer.get(id) ?? []), job]);
+    }
+  }
 
-  const lifetime = customers.reduce((sum, c) => sum + num(c.lifetimeValue), 0);
-  const receivable = [...openBalance.values()].reduce((a, b) => a + b, 0);
-  const onAgreement = customers.filter((c) => String(c.stage) === 'Service Agreement').length;
-
-  const stages = ['Lead', 'Estimate Sent', 'Active Customer', 'Repeat Customer', 'Service Agreement', 'Dormant', 'Lost'];
+  const doNotServe = customers.filter((c) => String(c.stage) === 'Do not serve').length;
 
   return (
     <>
       <PageHeader
-        title="CRM"
-        subtitle="Every account, what they are worth, what they owe, and when you last stood on their property."
-        actions={<Link href="/records/customers/new" className="btn-primary">+ New customer</Link>}
+        title="Customers"
+        subtitle="Who called, where they are, and whether they have called before."
       />
 
-      <section className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Accounts" value={String(customers.length)} hint={`${onAgreement} on a service agreement`} />
-        <MoneyStat label="Lifetime value" amount={lifetime} hint="Across all accounts shown" />
-        <MoneyStat label="Owed to you" amount={receivable} tone={receivable > 0 ? 'warn' : 'good'} />
-        <Stat label="Service locations" value={String(properties.length)} hint="Sites you have records for" />
+      <section className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-3">
+        <Stat label="Customers" value={String(customers.length)} />
+        <Stat label="Jobs on the books" value={String(jobs.length)} />
+        <Stat
+          label="Do not serve"
+          value={String(doNotServe)}
+          tone={doNotServe ? 'bad' : 'default'}
+          hint={doNotServe ? 'Do not book these' : undefined}
+        />
       </section>
 
       <form className="mb-4 flex flex-wrap items-center gap-2" action="/customers">
-        <input name="q" defaultValue={q ?? ''} placeholder="Search customers…" className="input max-w-xs" />
-        {segment ? <input type="hidden" name="segment" value={segment} /> : null}
-        <button className="btn" type="submit">Search</button>
-        <span className="mx-1 text-[color:var(--muted)]">|</span>
-        <Link href="/customers" className={`chip ${!stage ? 'border-volt-500/60 text-volt-200' : ''}`}>All stages</Link>
-        {stages.map((s) => (
-          <Link key={s} href={`/customers?stage=${encodeURIComponent(s)}`} className={`chip ${stage === s ? 'border-volt-500/60 text-volt-200' : ''}`}>
-            {s}
+        <input
+          name="q"
+          defaultValue={q ?? ''}
+          placeholder="Search name, phone, town…"
+          className="input min-w-0 flex-1 sm:max-w-xs"
+        />
+        <select name="stage" defaultValue={stage ?? ''} className="input w-auto">
+          <option value="">All stages</option>
+          {STAGE_OPTIONS.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+        <select name="kind" defaultValue={kind ?? ''} className="input w-auto">
+          <option value="">All kinds</option>
+          {KIND_OPTIONS.map((k) => (
+            <option key={k} value={k}>{k}</option>
+          ))}
+        </select>
+        <button className="btn" type="submit">Filter</button>
+        {(q || stage || kind) && (
+          <Link href="/customers" className="text-xs text-[color:var(--ink-muted)] underline-offset-2 hover:underline">
+            Clear
           </Link>
-        ))}
+        )}
       </form>
 
       {customers.length === 0 ? (
@@ -67,43 +94,58 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
             <table className="w-full">
               <thead>
                 <tr className="border-b border-[color:var(--line)]">
-                  <th className="th">Customer</th>
+                  <th className="th">Name</th>
+                  <th className="th">Phone</th>
+                  <th className="th">Town</th>
+                  <th className="th">Kind</th>
                   <th className="th">Stage</th>
-                  <th className="th">Segment</th>
-                  <th className="th">Contact</th>
                   <th className="th text-right">Jobs</th>
-                  <th className="th text-right">Sites</th>
-                  <th className="th text-right">Lifetime</th>
-                  <th className="th text-right">Balance</th>
-                  <th className="th">Last service</th>
-                  <th className="th">Flags</th>
+                  <th className="th text-right">Total</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[color:var(--line)]">
                 {customers.map((customer) => {
-                  const balance = openBalance.get(customer.id) ?? 0;
+                  const blocked = String(customer.stage) === 'Do not serve';
+                  const theirJobs = jobsByCustomer.get(customer.id) ?? [];
+                  const total = theirJobs.reduce((sum, j) => sum + num(j.amount), 0);
+                  const verdict = gateTown(String(customer.town ?? ''), territory);
+                  const gateTone = verdict.gate === 'GO' ? 'done' : verdict.gate === 'VERIFY' ? 'active' : verdict.gate === 'NO-GO' ? 'hazard' : 'neutral';
+
                   return (
-                    <tr key={customer.id} className="hover:bg-[color:var(--panel-2)]">
+                    <tr
+                      key={customer.id}
+                      className={clsx('hover:bg-[color:var(--surface-2)]', blocked && 'bg-[color:var(--hazard-bg)]')}
+                    >
                       <td className="td">
-                        <Link href={`/customers/${customer.id}`} className="font-medium hover:text-volt-200">{String(customer.name)}</Link>
-                        <div className="text-xs text-[color:var(--muted)]">{String(customer.source ?? '')}</div>
+                        <Link
+                          href={`/customers/${customer.id}`}
+                          className={clsx('font-medium hover:text-[color:var(--accent-ink)]', blocked && 'text-[color:var(--hazard)]')}
+                        >
+                          {String(customer.name)}
+                        </Link>
+                        {blocked && (
+                          <div className="mt-0.5 text-xs font-medium text-[color:var(--hazard)]">Do not serve</div>
+                        )}
                       </td>
-                      <td className="td"><StatusPill value={customer.stage} /></td>
-                      <td className="td text-[color:var(--muted)]">{String(customer.segment ?? '—')}</td>
-                      <td className="td">
-                        <div>{String(customer.phone ?? '—')}</div>
-                        <div className="text-xs text-[color:var(--muted)]">{String(customer.email ?? '')}</div>
+                      <td className="td whitespace-nowrap">
+                        {customer.phone ? (
+                          <a href={`tel:${String(customer.phone).replace(/[^\d+]/g, '')}`} className="text-[color:var(--accent-ink)] underline-offset-2 hover:underline">
+                            {String(customer.phone)}
+                          </a>
+                        ) : (
+                          <span className="text-[color:var(--ink-muted)]">—</span>
+                        )}
                       </td>
-                      <td className="td text-right tabular-nums">{jobCount.get(customer.id) ?? 0}</td>
-                      <td className="td text-right tabular-nums">{siteCount.get(customer.id) ?? 0}</td>
-                      <td className="td text-right tabular-nums">{money(customer.lifetimeValue, true)}</td>
-                      <td className={`td text-right tabular-nums ${balance > 0 ? 'text-volt-300' : 'text-[color:var(--muted)]'}`}>
-                        {money(balance, true)}
+                      <td className="td whitespace-nowrap">
+                        <span className="flex items-center gap-1.5">
+                          {String(customer.town ?? '—')}
+                          <StatusPill value={verdict.gate} tone={gateTone} className="text-[10px]" />
+                        </span>
                       </td>
-                      <td className="td whitespace-nowrap text-[color:var(--muted)]">
-                        {customer.lastServiceDate ? `${date(customer.lastServiceDate)} · ${relativeDays(customer.lastServiceDate)}` : '—'}
-                      </td>
-                      <td className="td"><Chips values={customer.tags} max={2} /></td>
+                      <td className="td">{String(customer.kind ?? '—')}</td>
+                      <td className="td"><StatusPill value={customer.stage} tone={blocked ? 'hazard' : undefined} /></td>
+                      <td className="td text-right tabular-nums">{theirJobs.length}</td>
+                      <td className="td text-right tabular-nums">{money(total, true)}</td>
                     </tr>
                   );
                 })}
@@ -114,20 +156,4 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
       )}
     </>
   );
-}
-
-function countBy(rows: RecordValue[], field: string): Map<string, number> {
-  const map = new Map<string, number>();
-  for (const row of rows) {
-    for (const id of relationIds(row[field])) map.set(id, (map.get(id) ?? 0) + 1);
-  }
-  return map;
-}
-
-function sumBy(rows: RecordValue[], field: string, value: (row: RecordValue) => number): Map<string, number> {
-  const map = new Map<string, number>();
-  for (const row of rows) {
-    for (const id of relationIds(row[field])) map.set(id, (map.get(id) ?? 0) + value(row));
-  }
-  return map;
 }

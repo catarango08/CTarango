@@ -7,6 +7,8 @@ import { normalizeId } from './client';
 export type DatabaseIdMap = Partial<Record<DbKey, string>>;
 
 const ID_FILE = process.env.NOTION_ID_FILE ?? path.join(process.cwd(), '.notion-ids.json');
+/** Checked in: the Tarango Electric OS databases that already exist. */
+const CONFIG_FILE = path.join(process.cwd(), 'notion.config.json');
 
 let cached: DatabaseIdMap | null = null;
 
@@ -31,7 +33,7 @@ export function databaseIds(refresh = false): DatabaseIdMap {
     try {
       Object.assign(map, JSON.parse(blob) as DatabaseIdMap);
     } catch {
-      console.warn('[voltflow] NOTION_DATABASE_IDS is not valid JSON — ignoring it.');
+      console.warn('[tarango] NOTION_DATABASE_IDS is not valid JSON — ignoring it.');
     }
   }
 
@@ -40,14 +42,15 @@ export function databaseIds(refresh = false): DatabaseIdMap {
     if (fromEnv) map[db.key] = fromEnv;
   }
 
-  if (fs.existsSync(ID_FILE)) {
+  for (const file of [ID_FILE, CONFIG_FILE]) {
+    if (!fs.existsSync(file)) continue;
     try {
-      const file = JSON.parse(fs.readFileSync(ID_FILE, 'utf8')) as { databases?: DatabaseIdMap };
-      for (const [key, value] of Object.entries(file.databases ?? {})) {
+      const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as { databases?: DatabaseIdMap };
+      for (const [key, value] of Object.entries(parsed.databases ?? {})) {
         if (!map[key as DbKey] && typeof value === 'string') map[key as DbKey] = value;
       }
     } catch {
-      console.warn(`[voltflow] Could not read ${ID_FILE} — ignoring it.`);
+      console.warn(`[tarango] Could not read ${file} — ignoring it.`);
     }
   }
 

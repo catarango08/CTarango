@@ -1,0 +1,5 @@
+Tarango Electric color lock
+Charcoal     #222426    RGB 34 36 38      truck, type
+Aged White   #F5F1E8    RGB 245 241 232   paper, magnet
+Harvest Gold #B8871F    RGB 184 135 31    rules, accent type
+Oxide Red    #8E382F    RGB 142 56 47     tagline / hazard only

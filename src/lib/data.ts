@@ -1,8 +1,10 @@
 import { cache } from 'react';
 import { getStore, type Query } from './store';
-import { getDb, titleField, type DbKey, type RecordValue, type RelationRef } from './schema';
+import { getDb, titleField, TERMINAL_STATUSES, type DbKey, type RecordValue, type RelationRef } from './schema';
 import { num, relationIds } from './calc';
 import { daysUntil, startOfDay, toDate } from './format';
+import { LICENSE } from './domain/rules';
+import { closeoutStatus, gateTown } from './domain/gates';
 
 /* ------------------------------------------------------------------ *
  * Fetching + relation label hydration
@@ -63,242 +65,166 @@ export async function relatedTo(db: DbKey, field: string, id: string): Promise<R
 }
 
 /* ------------------------------------------------------------------ *
- * Dashboard + reporting aggregates
+ * Today — "run the truck"
  * ------------------------------------------------------------------ */
 
 export interface Alert {
-  severity: 'critical' | 'warning' | 'info';
+  severity: 'stop' | 'watch' | 'note';
   title: string;
   detail: string;
   href?: string;
 }
 
-export interface Dashboard {
-  todaysJobs: RecordValue[];
-  activeJobs: RecordValue[];
-  unscheduled: RecordValue[];
-  openEstimates: RecordValue[];
-  overdueInvoices: RecordValue[];
-  recentPhotos: RecordValue[];
-  followUps: RecordValue[];
-  metrics: {
-    revenueMtd: number;
-    collectedMtd: number;
-    arTotal: number;
-    arOver30: number;
-    openEstimateValue: number;
-    winRate: number;
-    avgTicket: number;
-    jobsThisWeek: number;
-    utilization: number;
-    firstTimeFix: number;
-    unscheduledCount: number;
-  };
-  aging: { label: string; amount: number }[];
-  revenueByType: { label: string; amount: number }[];
+export interface Today {
+  onDeck: RecordValue[];
+  hanging: RecordValue[];
+  needsCloseout: RecordValue[];
+  newCalls: RecordValue[];
+  hours: { logged: number; target: number; remaining: number; selfPerformed: number; thisMonth: number; unverified: number };
+  money: { quotedOpen: number; unpaid: number; collectedThisMonth: number };
+  counts: { openJobs: number; greenTowns: number; equipmentDue: number };
   alerts: Alert[];
 }
 
-export async function loadDashboard(): Promise<Dashboard> {
-  const [jobs, invoices, payments, estimates, photos, tasks, technicians, timeEntries, permits, assets, materials, customers] =
-    await Promise.all([
-      loadAll('jobs'), loadAll('invoices'), loadAll('payments'), loadAll('estimates'),
-      loadAll('jobPhotos'), loadAll('tasks'), loadAll('technicians'), loadAll('timeEntries'),
-      loadAll('permits'), loadAll('assets'), loadAll('materials'), loadAll('customers'),
-    ]);
+export async function loadToday(): Promise<Today> {
+  const [jobs, photos, hourRows, territory, equipment] = await Promise.all([
+    loadAll('jobs'), loadAll('jobPhotos'), loadAll('hourLedger'), loadAll('territory'), loadAll('equipment'),
+  ]);
 
+  const terminal = new Set<string>(TERMINAL_STATUSES);
+  const open = jobs.filter((j) => !terminal.has(String(j.status)));
   const today = startOfDay(new Date());
   const tomorrow = new Date(today.getTime() + 86_400_000);
+
+  const onDeck = open
+    .filter((j) => {
+      const d = toDate(j.onSite);
+      return d ? d >= today && d < tomorrow : false;
+    })
+    .concat(open.filter((j) => ['On site', 'In Progress'].includes(String(j.status)) && !toDate(j.onSite)))
+    .filter((j, i, arr) => arr.findIndex((x) => x.id === j.id) === i);
+
+  const hanging = open
+    .filter((j) => ['Lead', 'New call', 'Qualify', 'Quoted'].includes(String(j.status)))
+    .sort((a, b) => (daysUntil(a.callIn) ?? 0) - (daysUntil(b.callIn) ?? 0));
+
+  const needsCloseout = jobs.filter((j) => {
+    if (String(j.status) !== 'Invoiced') return false;
+    const mine = photos.filter((p) => relationIds(p.job).includes(j.id));
+    return !closeoutStatus(j, mine).canClose;
+  });
+
+  const newCalls = open.filter((j) => String(j.status) === 'New call');
+
+  const logged = hourRows.reduce((sum, h) => sum + num(h.installHours), 0);
+  const selfPerformed = hourRows.filter((h) => String(h.source) === 'Self-performed').reduce((s, h) => s + num(h.installHours), 0);
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-  const weekAhead = new Date(today.getTime() + 7 * 86_400_000);
+  // Self-performed only: a prior-employer opening balance is history, not pace.
+  const thisMonth = hourRows
+    .filter((h) => {
+      const d = toDate(h.date);
+      return d ? d >= monthStart && String(h.source) === 'Self-performed' : false;
+    })
+    .reduce((s, h) => s + num(h.installHours), 0);
+  const unverified = hourRows.filter((h) => !h.affidavit).reduce((s, h) => s + num(h.installHours), 0);
 
-  const onDay = (job: RecordValue) => {
-    const start = toDate(job.scheduledStart);
-    return start ? start >= today && start < tomorrow : false;
-  };
-
-  const todaysJobs = jobs.filter(onDay).sort(byDate('scheduledStart'));
-  const activeJobs = jobs.filter((j) => ['Dispatched', 'On Site', 'In Progress', 'Needs Parts'].includes(String(j.status)));
-  const unscheduled = jobs.filter((j) => String(j.status) === 'Unscheduled');
-  const openEstimates = estimates.filter((e) => ['Draft', 'Sent', 'Viewed'].includes(String(e.status)));
-  const overdueInvoices = invoices
-    .filter((i) => num(i.balanceDue) > 0 && (String(i.status) === 'Overdue' || (daysUntil(i.dueOn) ?? 1) < 0))
-    .sort((a, b) => (daysUntil(a.dueOn) ?? 0) - (daysUntil(b.dueOn) ?? 0));
-
-  const decided = estimates.filter((e) => ['Approved', 'Converted to Job', 'Declined', 'Expired'].includes(String(e.status)));
-  const won = decided.filter((e) => ['Approved', 'Converted to Job'].includes(String(e.status)));
-
-  const revenueMtd = invoices
-    .filter((i) => withinMonth(i.issuedOn, monthStart) && String(i.status) !== 'Void')
-    .reduce((sum, i) => sum + num(i.total), 0);
-  const collectedMtd = payments
-    .filter((p) => withinMonth(p.receivedOn, monthStart))
-    .reduce((sum, p) => sum + num(p.amount) * (p.kind === 'Refund' ? -1 : 1), 0);
-
-  const arTotal = invoices.reduce((sum, i) => sum + num(i.balanceDue), 0);
-  const arOver30 = invoices
-    .filter((i) => num(i.balanceDue) > 0 && (daysUntil(i.dueOn) ?? 0) <= -30)
-    .reduce((sum, i) => sum + num(i.balanceDue), 0);
-
-  const closedJobs = jobs.filter((j) => ['Closed', 'Invoiced', 'Ready to Invoice'].includes(String(j.status)));
-  const callbacks = jobs.filter((j) => j.warranty === true || String(j.jobType) === 'Warranty Callback');
-  const firstTimeFix = closedJobs.length ? 1 - callbacks.length / closedJobs.length : 1;
-
-  const recentHours = timeEntries.filter((e) => (daysUntil(e.startedAt) ?? -99) >= -14);
-  const billableHours = recentHours.filter((e) => e.billable).reduce((sum, e) => sum + num(e.hours), 0);
-  const totalHours = recentHours.reduce((sum, e) => sum + num(e.hours), 0);
-
-  const paidJobs = closedJobs.filter((j) => num(j.revenue) > 0);
-  const avgTicket = paidJobs.length ? paidJobs.reduce((s, j) => s + num(j.revenue), 0) / paidJobs.length : 0;
-
-  const aging = agingBuckets(invoices);
-  const revenueByType = groupSum(closedJobs, (j) => String(j.jobType ?? 'Other'), (j) => num(j.revenue))
-    .sort((a, b) => b.amount - a.amount)
-    .slice(0, 7);
-
-  const alerts = buildAlerts({ technicians, assets, permits, invoices, materials, customers, jobs, tasks });
+  const quotedOpen = open.filter((j) => ['Quoted', 'Approved', 'Scheduled'].includes(String(j.status))).reduce((s, j) => s + num(j.amount), 0);
+  const unpaid = jobs.filter((j) => String(j.status) === 'Invoiced' && !j.paid).reduce((s, j) => s + num(j.amount), 0);
+  const collectedThisMonth = jobs
+    .filter((j) => j.paid && toDate(j.onSite) && toDate(j.onSite)! >= monthStart)
+    .reduce((s, j) => s + num(j.amount), 0);
 
   return {
-    todaysJobs,
-    activeJobs,
-    unscheduled,
-    openEstimates,
-    overdueInvoices,
-    recentPhotos: [...photos].sort(byDate('takenAt')).reverse().slice(0, 12),
-    followUps: tasks
-      .filter((t) => String(t.status) !== 'Done' && (daysUntil(t.dueDate) ?? 99) <= 7)
-      .sort((a, b) => (daysUntil(a.dueDate) ?? 99) - (daysUntil(b.dueDate) ?? 99)),
-    metrics: {
-      revenueMtd,
-      collectedMtd,
-      arTotal,
-      arOver30,
-      openEstimateValue: openEstimates.reduce((sum, e) => sum + num(e.total), 0),
-      winRate: decided.length ? won.length / decided.length : 0,
-      avgTicket,
-      jobsThisWeek: jobs.filter((j) => {
-        const d = toDate(j.scheduledStart);
-        return d ? d >= today && d < weekAhead : false;
-      }).length,
-      utilization: totalHours ? billableHours / totalHours : 0,
-      firstTimeFix,
-      unscheduledCount: unscheduled.length,
+    onDeck,
+    hanging,
+    needsCloseout,
+    newCalls,
+    hours: {
+      logged,
+      target: LICENSE.targetHours,
+      remaining: Math.max(0, LICENSE.targetHours - logged),
+      selfPerformed,
+      thisMonth,
+      unverified,
     },
-    aging,
-    revenueByType,
-    alerts,
+    money: { quotedOpen, unpaid, collectedThisMonth },
+    counts: {
+      openJobs: open.length,
+      greenTowns: territory.filter((t) => String(t.status) === 'GO').length,
+      equipmentDue: equipment.filter((e) => (daysUntil(e.nextService) ?? 999) <= 30).length,
+    },
+    alerts: buildAlerts({ jobs, open, photos, territory, equipment, hourRows }),
   };
 }
 
 function buildAlerts(input: {
-  technicians: RecordValue[];
-  assets: RecordValue[];
-  permits: RecordValue[];
-  invoices: RecordValue[];
-  materials: RecordValue[];
-  customers: RecordValue[];
   jobs: RecordValue[];
-  tasks: RecordValue[];
+  open: RecordValue[];
+  photos: RecordValue[];
+  territory: RecordValue[];
+  equipment: RecordValue[];
+  hourRows: RecordValue[];
 }): Alert[] {
   const alerts: Alert[] = [];
 
-  for (const tech of input.technicians) {
-    const licenseDays = daysUntil(tech.licenseExpires);
-    if (licenseDays !== null && licenseDays < 0) {
-      alerts.push({ severity: 'critical', title: `${tech.name}'s license has expired`, detail: `Expired ${Math.abs(licenseDays)} days ago. Do not assign permitted work.`, href: '/team' });
-    } else if (licenseDays !== null && licenseDays <= 60) {
-      alerts.push({ severity: 'warning', title: `${tech.name}'s license expires in ${licenseDays} days`, detail: 'Start the renewal now — the state board takes weeks.', href: '/team' });
-    }
-    const certDays = daysUntil(tech.certExpires);
-    if (certDays !== null && certDays >= 0 && certDays <= 45) {
-      alerts.push({ severity: 'info', title: `${tech.name}: certification expires in ${certDays} days`, detail: String(tech.certifications ?? ''), href: '/team' });
-    }
-  }
-
-  for (const asset of input.assets) {
-    const calDays = daysUntil(asset.calibrationDue);
-    if (calDays !== null && calDays < 0) {
-      alerts.push({ severity: 'critical', title: `${asset.name} calibration is overdue`, detail: `Overdue by ${Math.abs(calDays)} days. Readings from it are not defensible.`, href: '/records/assets' });
-    }
-    const regDays = daysUntil(asset.registrationExpires);
-    if (regDays !== null && regDays < 0) {
-      alerts.push({ severity: 'warning', title: `${asset.name} registration expired`, detail: 'Vehicle should not be on the road.', href: '/records/assets' });
+  // A job sitting in a red or unverified town is the one thing that must stop.
+  for (const job of input.open) {
+    const verdict = gateTown(String(job.town ?? ''), input.territory);
+    if (verdict.blockQuote && !['No-go', 'Lost', 'Declined'].includes(String(job.status))) {
+      alerts.push({
+        severity: verdict.gate === 'NO-GO' ? 'stop' : 'watch',
+        title: `${job.name} is in a ${verdict.gate} town`,
+        detail: verdict.instruction,
+        href: `/jobs/${job.id}`,
+      });
     }
   }
 
-  for (const permit of input.permits) {
-    if (String(permit.status) === 'Corrections Required') {
-      alerts.push({ severity: 'critical', title: `Failed inspection: ${permit.title}`, detail: String(permit.corrections ?? 'Corrections required before cover.'), href: '/permits' });
+  for (const job of input.jobs) {
+    if (job.hiddenDamage && !/change[- ]order/i.test(String(job.nextAction ?? ''))) {
+      alerts.push({
+        severity: 'stop',
+        title: `Hidden damage open on ${job.name}`,
+        detail: 'Show them, write the change line, get a yes in writing. Do not resume until they reply.',
+        href: `/jobs/${job.id}`,
+      });
+    }
+    if (String(job.status) === 'Approved' && num(job.amount) > 1500 && !job.depositIn) {
+      alerts.push({
+        severity: 'watch',
+        title: `Deposit not collected on ${job.name}`,
+        detail: `$${num(job.amount).toLocaleString()} job. 50% is due before the work starts.`,
+        href: `/jobs/${job.id}`,
+      });
     }
   }
 
-  for (const invoice of input.invoices) {
-    const lienDays = daysUntil(invoice.lienDeadline);
-    if (lienDays !== null && lienDays <= 14 && num(invoice.balanceDue) > 0) {
-      alerts.push({ severity: 'critical', title: `Lien deadline in ${lienDays} days — ${invoice.invoiceNumber}`, detail: `${money(num(invoice.balanceDue))} outstanding. File the notice or lose the claim.`, href: '/invoices' });
+  for (const item of input.equipment) {
+    const due = daysUntil(item.nextService);
+    if (due !== null && due < 0 && String(item.agreement) !== 'None') {
+      alerts.push({
+        severity: 'watch',
+        title: `${item.name} service is overdue`,
+        detail: `${Math.abs(due)} days past due on a Keep Power ${item.agreement} agreement.`,
+        href: '/equipment',
+      });
     }
   }
 
-  const lowStock = input.materials.filter((m) => num(m.onHand) <= num(m.reorderPoint));
-  if (lowStock.length) {
+  const unverified = input.hourRows.filter((h) => !h.affidavit).reduce((s, h) => s + num(h.installHours), 0);
+  if (unverified > 0) {
     alerts.push({
-      severity: lowStock.some((m) => num(m.onHand) === 0) ? 'warning' : 'info',
-      title: `${lowStock.length} items at or below reorder point`,
-      detail: lowStock.slice(0, 3).map((m) => m.name).join(', ') + (lowStock.length > 3 ? '…' : ''),
-      href: '/inventory',
+      severity: 'note',
+      title: `${unverified.toLocaleString()} hours have no affidavit behind them`,
+      detail: 'The board wants documentation. Chase the letters before the total matters.',
+      href: '/hours',
     });
   }
 
-  for (const customer of input.customers) {
-    if (customer.creditHold) {
-      alerts.push({ severity: 'warning', title: `${customer.name} is on credit hold`, detail: 'Dispatch blocked until the office clears it.', href: '/customers' });
-    }
-  }
-
-  const order = { critical: 0, warning: 1, info: 2 };
+  const order = { stop: 0, watch: 1, note: 2 };
   return alerts.sort((a, b) => order[a.severity] - order[b.severity]);
 }
 
-function money(n: number): string {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
-}
-
-export function agingBuckets(invoices: RecordValue[]): { label: string; amount: number }[] {
-  const buckets = [
-    { label: 'Current', amount: 0 },
-    { label: '1–30', amount: 0 },
-    { label: '31–60', amount: 0 },
-    { label: '61–90', amount: 0 },
-    { label: '90+', amount: 0 },
-  ];
-  for (const invoice of invoices) {
-    const balance = num(invoice.balanceDue);
-    if (balance <= 0) continue;
-    const overdue = -(daysUntil(invoice.dueOn) ?? 0);
-    const index = overdue <= 0 ? 0 : overdue <= 30 ? 1 : overdue <= 60 ? 2 : overdue <= 90 ? 3 : 4;
-    buckets[index].amount += balance;
-  }
-  return buckets;
-}
-
-export function groupSum<T>(rows: T[], key: (row: T) => string, value: (row: T) => number): { label: string; amount: number }[] {
-  const map = new Map<string, number>();
-  for (const row of rows) {
-    const k = key(row);
-    map.set(k, (map.get(k) ?? 0) + value(row));
-  }
-  return [...map.entries()].map(([label, amount]) => ({ label, amount }));
-}
-
-function withinMonth(value: unknown, monthStart: Date): boolean {
-  const d = toDate(value);
-  return d ? d >= monthStart : false;
-}
-
 export function byDate(key: string): (a: RecordValue, b: RecordValue) => number {
-  return (a, b) => {
-    const da = toDate(a[key])?.getTime() ?? 0;
-    const db = toDate(b[key])?.getTime() ?? 0;
-    return da - db;
-  };
+  return (a, b) => (toDate(a[key])?.getTime() ?? 0) - (toDate(b[key])?.getTime() ?? 0);
 }

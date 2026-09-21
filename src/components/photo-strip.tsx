@@ -9,7 +9,7 @@ function firstUrl(photo: RecordValue): string {
 
 export function PhotoTile({ photo, href }: { photo: RecordValue; href?: string }) {
   const body = (
-    <figure className="group relative overflow-hidden rounded-lg border border-[color:var(--line)] bg-[color:var(--panel-2)]">
+    <figure className="group relative overflow-hidden rounded-lg border border-[color:var(--line)] bg-[color:var(--surface-2)]">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={firstUrl(photo)}
@@ -30,7 +30,7 @@ export function PhotoTile({ photo, href }: { photo: RecordValue; href?: string }
 
 export function PhotoStrip({ photos, columns = 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4' }: { photos: RecordValue[]; columns?: string }) {
   if (!photos.length) {
-    return <p className="text-sm text-[color:var(--muted)]">No photos yet. Every job should leave a before and an after.</p>;
+    return <p className="text-sm text-[color:var(--ink-muted)]">No photos yet. Cover off, cover on — four minimum before this job can close.</p>;
   }
   return (
     <div className={`grid gap-2 ${columns}`}>

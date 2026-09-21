@@ -3,7 +3,7 @@ import { getStore, type Condition, type Query } from '@/lib/store';
 import { tryGetDb, type DbKey } from '@/lib/schema';
 import { validateRecord } from '@/lib/schema/validate';
 import { hydrate } from '@/lib/data';
-import { applyDerived } from '@/lib/domain';
+import { applyDerived } from '@/lib/domain/writes';
 
 export const dynamic = 'force-dynamic';
 

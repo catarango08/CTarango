@@ -3,6 +3,7 @@ import { databaseIds, envVarFor, missingDatabases, notionConfigured } from '@/li
 import { NotionClient } from '@/lib/notion/client';
 import { Card, PageHeader, Stat } from '@/components/ui';
 import { getStore } from '@/lib/store';
+import { HARD_LINES } from '@/lib/domain/rules';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,7 +11,6 @@ export default async function SetupPage() {
   const hasToken = Boolean(process.env.NOTION_TOKEN);
   const ids = databaseIds(true);
   const missing = missingDatabases();
-  const connected = notionConfigured();
   const problems = validateSchema();
 
   let workspace: string | null = null;
@@ -28,69 +28,70 @@ export default async function SetupPage() {
     <>
       <PageHeader
         title="Notion setup"
-        subtitle="VoltFlow keeps no database of its own. Every record lives in your Notion workspace, which means your team can also open, filter and comment on it there."
+        subtitle="This app keeps no database of its own. Every record lives in the Tarango Electric OS, so the file cabinet stays where you already keep it."
       />
 
       <section className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Data source" value={getStore().kind === 'notion' ? 'Notion' : 'Demo'} tone={connected ? 'good' : 'warn'} />
-        <Stat label="Integration token" value={hasToken ? (tokenError ? 'Error' : 'Present') : 'Missing'} tone={hasToken && !tokenError ? 'good' : 'bad'} />
-        <Stat label="Databases mapped" value={`${allDatabases().length - missing.length} / ${allDatabases().length}`} tone={missing.length ? 'warn' : 'good'} />
+        <Stat label="Reading from" value={getStore().kind === 'notion' ? 'Notion' : 'Sample data'} tone={notionConfigured() ? 'good' : 'warn'} />
+        <Stat label="Integration token" value={hasToken ? (tokenError ? 'Rejected' : 'Present') : 'Missing'} tone={hasToken && !tokenError ? 'good' : 'bad'} />
+        <Stat label="Databases wired" value={`${allDatabases().length - missing.length} / ${allDatabases().length}`} tone={missing.length ? 'warn' : 'good'} />
         <Stat label="Schema check" value={problems.length ? `${problems.length} issues` : 'Clean'} tone={problems.length ? 'bad' : 'good'} />
       </section>
 
       {tokenError && (
-        <div className="mb-4 rounded-lg border border-rose-500/40 bg-rose-500/10 p-3 text-sm">
-          <strong className="text-rose-200">Notion rejected the token.</strong> {tokenError}
+        <div className="mb-4 rounded border border-[color:var(--hazard)] bg-[color:var(--hazard-bg)] p-3 text-sm">
+          <strong className="text-[color:var(--hazard)]">Notion rejected the token.</strong> {tokenError}
         </div>
       )}
       {workspace && !tokenError && (
-        <div className="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm">
+        <div className="mb-4 rounded border border-[color:var(--go)] bg-[color:var(--go-bg)] p-3 text-sm">
           Connected to <strong>{workspace}</strong>.
         </div>
       )}
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <Card title="Three steps to go live">
+        <Card title="Connecting it">
           <ol className="space-y-4 text-sm">
             <li>
-              <p className="font-medium">1 · Create an internal integration</p>
-              <p className="mt-1 text-[color:var(--muted)]">
-                At <span className="font-mono">notion.so/my-integrations</span>, create one and copy the secret. Give it
-                read, update and insert content capabilities.
+              <p className="font-semibold">1 · Make an internal integration</p>
+              <p className="mt-1 text-[color:var(--ink-muted)]">
+                notion.so/my-integrations. Read, update and insert content. Copy the secret.
               </p>
             </li>
             <li>
-              <p className="font-medium">2 · Share one parent page with it</p>
-              <p className="mt-1 text-[color:var(--muted)]">
-                Make an empty page — &ldquo;VoltFlow&rdquo; works — and use the page menu → Connections → your integration.
-                Every database gets created inside it, so that one share is the only permission you grant.
+              <p className="font-semibold">2 · Share the OS page with it</p>
+              <p className="mt-1 text-[color:var(--ink-muted)]">
+                Open <strong>Tarango Electric OS</strong> → ⋯ → Connections → your integration. Sharing the
+                parent page shares every database under it.
               </p>
             </li>
             <li>
-              <p className="font-medium">3 · Run the bootstrap</p>
-              <pre className="mt-1 overflow-x-auto rounded-lg bg-[color:var(--bg)] p-3 text-xs">
+              <p className="font-semibold">3 · Point the app at it</p>
+              <pre className="mt-1 overflow-x-auto rounded bg-[color:var(--bg)] p-3 text-xs">
 {`cp .env.example .env.local
-# fill in NOTION_TOKEN and NOTION_PARENT_PAGE_ID
-npm run notion:bootstrap      # creates all ${allDatabases().length} databases + relations
-npm run notion:seed           # optional: load the sample company
-npm run notion:verify         # confirms every property matches the schema`}
+# NOTION_TOKEN=ntn_...
+
+npm run notion:bootstrap -- --dry   # see what it would touch
+npm run notion:bootstrap            # attach, add anything missing
+npm run notion:verify               # confirm it matches the schema`}
               </pre>
             </li>
           </ol>
-          <p className="mt-4 text-xs text-[color:var(--muted)]">
-            The bootstrap is idempotent: run it again after changing the schema and it adds the new properties
-            rather than recreating anything.
+          <p className="mt-4 text-xs text-[color:var(--ink-muted)]">
+            The database ids are already checked into <span className="font-mono">notion.config.json</span>, so
+            the token is the only secret you supply. The bootstrap never recreates a database that exists — at
+            most it adds a property the app needs, and <span className="font-mono">--dry</span> shows you first.
           </p>
         </Card>
 
-        <Card title="Database mapping">
+        <Card title="The databases">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-[color:var(--line)]">
                   <th className="th">Database</th>
-                  <th className="th">Env var</th>
-                  <th className="th">Notion id</th>
+                  <th className="th">Origin</th>
+                  <th className="th">Id</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[color:var(--line)]">
@@ -99,8 +100,10 @@ npm run notion:verify         # confirms every property matches the schema`}
                   return (
                     <tr key={db.key}>
                       <td className="td">{db.emoji} {db.label}</td>
-                      <td className="td font-mono text-xs text-[color:var(--muted)]">{envVarFor(db.key)}</td>
-                      <td className={`td font-mono text-xs ${id ? 'text-emerald-300' : 'text-rose-300'}`}>
+                      <td className="td text-xs text-[color:var(--ink-muted)]">
+                        {db.existing ? 'Already in the OS' : 'Added by this app'}
+                      </td>
+                      <td className={`td font-mono text-xs ${id ? 'text-[color:var(--go)]' : 'text-[color:var(--hazard)]'}`}>
                         {id ? `${id.slice(0, 8)}…` : 'not set'}
                       </td>
                     </tr>
@@ -109,42 +112,51 @@ npm run notion:verify         # confirms every property matches the schema`}
               </tbody>
             </table>
           </div>
+          <p className="mt-3 text-xs text-[color:var(--ink-muted)]">
+            Override any of them with {envVarFor('jobs')}-style environment variables.
+          </p>
         </Card>
       </div>
 
+      <Card title="What the app enforces" className="mt-4">
+        <ul className="space-y-2 text-sm">
+          {HARD_LINES.map((line) => (
+            <li key={line} className="flex gap-2">
+              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[color:var(--accent)]" />
+              <span>{line}</span>
+            </li>
+          ))}
+        </ul>
+      </Card>
+
+      <Card title="Things worth knowing" className="mt-4">
+        <ul className="list-disc space-y-1.5 pl-5 text-sm text-[color:var(--ink-muted)]">
+          <li>
+            <strong className="text-[color:var(--ink)]">Job #, Hours logged, Lane, Play, Ready and Closeout score</strong> are
+            computed by Notion. The app reads them and never writes them.
+          </li>
+          <li>
+            The Notion API cannot read a formula&rsquo;s source, so the next-move logic here is restated from the
+            <em> New client process</em> page rather than copied from the <span className="font-mono">Play</span> formula.
+            The job screen shows both so they can be compared instead of drifting apart quietly.
+          </li>
+          <li>
+            Photos upload through Notion&rsquo;s file endpoint, 20 MB each. The URLs Notion returns are signed and
+            expire, so nothing caches them.
+          </li>
+          <li>
+            Notion rate-limits around three requests a second. The client backs off and retries on its own.
+          </li>
+        </ul>
+      </Card>
+
       {problems.length > 0 && (
         <Card title="Schema problems" className="mt-4">
-          <ul className="list-disc space-y-1 pl-5 text-sm text-rose-300">
-            {problems.map((problem) => (
-              <li key={problem}>{problem}</li>
-            ))}
+          <ul className="list-disc space-y-1 pl-5 text-sm text-[color:var(--hazard)]">
+            {problems.map((p) => <li key={p}>{p}</li>)}
           </ul>
         </Card>
       )}
-
-      <Card title="What lives where" className="mt-4">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {allDatabases().map((db) => (
-            <div key={db.key} className="panel-2 p-3">
-              <div className="text-sm font-medium">{db.emoji} {db.label}</div>
-              <p className="mt-1 text-xs text-[color:var(--muted)]">{db.description}</p>
-              <p className="mt-2 text-[11px] text-[color:var(--muted)]">
-                {db.fields.length} properties · {db.fields.filter((f) => f.type === 'relation').length} relations
-                {db.fields.some((f) => f.type === 'files') ? ' · holds files' : ''}
-              </p>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      <Card title="Notes on the Notion API" className="mt-4">
-        <ul className="list-disc space-y-1.5 pl-5 text-sm text-[color:var(--muted)]">
-          <li>Status-type properties cannot be created through the API, so every workflow state here is a <strong>select</strong>. Convert one in the Notion UI later if you want its board grouping.</li>
-          <li>Rollups and formulas are deliberately left out: totals, margins and balances are computed by the app and written as plain numbers, so the figures read correctly inside Notion too.</li>
-          <li>Photos upload through Notion&rsquo;s file-upload endpoint (20 MB per file, single-part). File URLs Notion returns are signed and expire, so the app always re-reads them rather than caching.</li>
-          <li>Notion rate-limits at roughly three requests per second; the client retries with exponential backoff and honours <span className="font-mono">Retry-After</span>.</li>
-        </ul>
-      </Card>
     </>
   );
 }

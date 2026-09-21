@@ -28,7 +28,11 @@ export type FieldType =
   | 'relation'
   | 'files'
   | 'created_time'
-  | 'last_edited_time';
+  | 'last_edited_time'
+  // Read-only Notion types. Decoded for display, never written, never created.
+  | 'auto_number'
+  | 'rollup'
+  | 'formula';
 
 export interface FieldDef {
   /** camelCase key used throughout the app and in JSON payloads. */
@@ -48,16 +52,24 @@ export interface FieldDef {
   help?: string;
   /** Show this column in the generic table view. */
   column?: boolean;
+  /** Notion computes this. Never sent on a write, never provisioned. */
+  readOnly?: boolean;
   /** Hide from generated forms (derived or system-managed values). */
   derived?: boolean;
   /** Placeholder / example shown in forms. */
   placeholder?: string;
 }
 
-export type DbGroup = 'crm' | 'operations' | 'money' | 'workforce' | 'supply' | 'compliance';
+export type DbGroup = 'field' | 'crm' | 'money' | 'license' | 'reference';
 
 export interface DbDef {
   key: DbKey;
+  /**
+   * True when the database already exists in the Tarango Electric OS and we
+   * attach to it by id. The bootstrap may add missing properties to these but
+   * never creates or replaces them.
+   */
+  existing?: boolean;
   /** Database title in Notion. */
   label: string;
   /** Singular noun for UI copy. */
@@ -72,28 +84,15 @@ export interface DbDef {
 }
 
 export type DbKey =
-  | 'customers'
-  | 'contacts'
-  | 'properties'
-  | 'interactions'
   | 'jobs'
-  | 'jobPhotos'
-  | 'tasks'
-  | 'estimates'
-  | 'lineItems'
-  | 'invoices'
-  | 'payments'
-  | 'technicians'
-  | 'timeEntries'
-  | 'materials'
-  | 'materialUsage'
-  | 'vendors'
-  | 'purchaseOrders'
+  | 'customers'
+  | 'hourLedger'
+  | 'rateBook'
   | 'permits'
-  | 'safety'
-  | 'agreements'
-  | 'assets'
-  | 'documents';
+  | 'referrals'
+  | 'equipment'
+  | 'territory'
+  | 'jobPhotos';
 
 /** A record as the app sees it: plain JSON, Notion page id under `id`. */
 export interface RecordValue {

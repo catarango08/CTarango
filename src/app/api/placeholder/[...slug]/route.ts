@@ -8,21 +8,21 @@ import { NextResponse } from 'next/server';
  * real upload — and a generated SVG keeps the repo free of binary fixtures.
  */
 
+/** Stand-in imagery stays inside the four-colour lock. */
 const TONES: Record<string, [string, string]> = {
-  rust: ['#4a2418', '#a6521f'],
-  amber: ['#43310c', '#d79a22'],
-  slate: ['#1a2432', '#3d5573'],
-  blue: ['#12273f', '#2f6fa8'],
-  green: ['#12321f', '#2f8a52'],
-  thermal: ['#2a0a3d', '#ff6a2b'],
-  upload: ['#1b2433', '#4a6690'],
+  charcoal: ['#222426', '#3A3E41'],
+  gold: ['#7A570F', '#B8871F'],
+  go: ['#2C4C34', '#3F6B4A'],
+  hazard: ['#5C241E', '#8E382F'],
+  paper: ['#C4BAA3', '#EDE7DA'],
+  upload: ['#222426', '#565B5F'],
 };
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const label = url.searchParams.get('label') ?? 'Job photo';
   const tone = url.searchParams.get('tone') ?? 'slate';
-  const [dark, light] = TONES[tone] ?? TONES.slate;
+  const [dark, light] = TONES[tone] ?? TONES.charcoal;
 
   const lines = wrap(label, 26).slice(0, 2);
   const text = lines

@@ -4,40 +4,41 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import clsx from 'clsx';
 import { useState } from 'react';
+import { Monogram } from './brand';
+import { ThemeToggle } from './theme-toggle';
 
-const SECTIONS: { heading: string; items: { href: string; label: string; icon: string }[] }[] = [
+const SECTIONS: { heading: string; items: { href: string; label: string }[] }[] = [
   {
-    heading: 'Run the day',
+    heading: 'Run the truck',
     items: [
-      { href: '/', label: 'Today', icon: '◉' },
-      { href: '/dispatch', label: 'Dispatch board', icon: '▦' },
-      { href: '/jobs', label: 'Jobs', icon: '⚡' },
-      { href: '/photos', label: 'Job photos', icon: '◧' },
+      { href: '/', label: 'Today' },
+      { href: '/new-call', label: 'New call' },
+      { href: '/jobs', label: 'Jobs' },
+      { href: '/photos', label: 'Photos' },
     ],
   },
   {
-    heading: 'Customers',
+    heading: 'Money',
     items: [
-      { href: '/customers', label: 'CRM', icon: '◆' },
-      { href: '/estimates', label: 'Estimates', icon: '◈' },
-      { href: '/invoices', label: 'Invoices', icon: '$' },
+      { href: '/rates', label: 'Rate book' },
+      { href: '/hours', label: 'Hours to license' },
     ],
   },
   {
-    heading: 'Back office',
+    heading: 'Who and where',
     items: [
-      { href: '/inventory', label: 'Inventory', icon: '▤' },
-      { href: '/team', label: 'Team', icon: '◍' },
-      { href: '/permits', label: 'Permits', icon: '⚑' },
-      { href: '/safety', label: 'Safety', icon: '⛑' },
-      { href: '/reports', label: 'Reports', icon: '◑' },
+      { href: '/customers', label: 'Customers' },
+      { href: '/territory', label: 'Territory' },
+      { href: '/referrals', label: 'Referrals' },
+      { href: '/equipment', label: 'Keep Power' },
+      { href: '/permits', label: 'Permit offices' },
     ],
   },
   {
     heading: 'System',
     items: [
-      { href: '/records', label: 'All databases', icon: '▣' },
-      { href: '/setup', label: 'Notion setup', icon: '⚙' },
+      { href: '/records', label: 'All databases' },
+      { href: '/setup', label: 'Notion setup' },
     ],
   },
 ];
@@ -48,33 +49,36 @@ export function Sidebar({ storeKind }: { storeKind: 'notion' | 'demo' }) {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="btn fixed left-3 top-3 z-50 lg:hidden"
-        aria-label="Toggle navigation"
-      >
-        ☰
-      </button>
+      <div className="fixed inset-x-0 top-0 z-50 flex items-center gap-2 border-b border-[color:var(--line)] bg-[color:var(--surface)] px-3 py-2 lg:hidden">
+        <button type="button" onClick={() => setOpen((v) => !v)} className="btn" aria-label="Menu">☰</button>
+        <Link href="/" className="flex items-center gap-2">
+          <Monogram className="h-7 w-7 rounded" />
+          <span className="display text-sm">Tarango Electric</span>
+        </Link>
+        <span className="ml-auto"><ThemeToggle /></span>
+      </div>
 
       <aside
         className={clsx(
-          'fixed inset-y-0 left-0 z-40 w-60 shrink-0 overflow-y-auto border-r border-[color:var(--line)] bg-[color:var(--panel)] px-3 py-4 transition-transform lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-40 w-60 shrink-0 overflow-y-auto border-r border-[color:var(--line)] bg-[color:var(--surface)] px-3 py-4 transition-transform lg:translate-x-0',
           open ? 'translate-x-0' : '-translate-x-full',
         )}
       >
-        <Link href="/" className="mb-6 flex items-center gap-2 px-2 pt-8 lg:pt-0" onClick={() => setOpen(false)}>
-          <span className="grid h-8 w-8 place-items-center rounded-lg bg-volt-400 text-lg font-black text-slate-950">V</span>
+        <Link href="/" className="mb-1 flex items-center gap-2.5 px-1 pt-12 lg:pt-0" onClick={() => setOpen(false)}>
+          <Monogram className="h-10 w-10 rounded" />
           <span>
-            <span className="block text-sm font-bold leading-tight tracking-tight">VoltFlow</span>
-            <span className="block text-[11px] leading-tight text-[color:var(--muted)]">Electrical ops</span>
+            <span className="display block text-base leading-none">Tarango</span>
+            <span className="block font-serif text-[11px] leading-tight tracking-[0.18em] text-[color:var(--ink-muted)]">
+              ELECTRIC
+            </span>
           </span>
         </Link>
+        <div className="rule-gold mb-4 mt-3" />
 
         <nav className="space-y-5">
           {SECTIONS.map((section) => (
             <div key={section.heading}>
-              <div className="label px-2 pb-1.5">{section.heading}</div>
+              <div className="label px-1 pb-1.5">{section.heading}</div>
               <ul className="space-y-0.5">
                 {section.items.map((item) => {
                   const active = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
@@ -84,13 +88,12 @@ export function Sidebar({ storeKind }: { storeKind: 'notion' | 'demo' }) {
                         href={item.href}
                         onClick={() => setOpen(false)}
                         className={clsx(
-                          'flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm transition',
+                          'flex min-h-11 items-center rounded px-2 text-sm transition',
                           active
-                            ? 'bg-volt-400/10 font-medium text-volt-200'
-                            : 'text-[color:var(--muted)] hover:bg-[color:var(--panel-2)] hover:text-[color:var(--text)]',
+                            ? 'bg-[color:var(--accent)]/15 font-semibold text-[color:var(--accent-ink)]'
+                            : 'text-[color:var(--ink-muted)] hover:bg-[color:var(--surface-2)] hover:text-[color:var(--ink)]',
                         )}
                       >
-                        <span className="w-4 text-center text-xs opacity-70">{item.icon}</span>
                         {item.label}
                       </Link>
                     </li>
@@ -101,23 +104,28 @@ export function Sidebar({ storeKind }: { storeKind: 'notion' | 'demo' }) {
           ))}
         </nav>
 
+        <div className="mt-6 hidden lg:block"><ThemeToggle /></div>
+
         <Link
           href="/setup"
           onClick={() => setOpen(false)}
           className={clsx(
-            'mt-6 block rounded-lg border px-3 py-2 text-xs',
+            'mt-3 block rounded border px-2.5 py-2 text-xs',
             storeKind === 'notion'
-              ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
-              : 'border-volt-500/30 bg-volt-500/10 text-volt-200',
+              ? 'border-[color:var(--go)] bg-[color:var(--go-bg)] text-[color:var(--go)]'
+              : 'border-[color:var(--accent)] bg-[color:var(--accent)]/10 text-[color:var(--accent-ink)]',
           )}
         >
           <span className="block font-semibold">
-            {storeKind === 'notion' ? '● Connected to Notion' : '● Demo data'}
+            {storeKind === 'notion' ? 'Notion connected' : 'Sample data'}
           </span>
           <span className="mt-0.5 block opacity-80">
-            {storeKind === 'notion' ? 'Reads and writes go to your workspace.' : 'Run the bootstrap to connect Notion.'}
+            {storeKind === 'notion' ? 'Reads and writes hit the OS.' : 'Add a token to use the real OS.'}
           </span>
         </Link>
+
+        <p className="mt-4 px-1 font-serif text-[11px] italic text-[color:var(--tagline)]">Show up. Fix it right.</p>
+        <p className="mt-1 px-1 text-[11px] text-[color:var(--ink-muted)]">(417) 501-4752</p>
       </aside>
 
       {open && <div className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={() => setOpen(false)} aria-hidden />}

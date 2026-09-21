@@ -1,5 +1,5 @@
 import type { DbDef, FieldDef, FileRef, RecordValue, RelationRef } from '../schema';
-import { dualLabel, getDb } from '../schema';
+import { dualLabel, getDb, isWritable } from '../schema';
 import type { NotionPage, NotionPropertyValue } from './client';
 
 const RICH_TEXT_LIMIT = 2000;
@@ -42,6 +42,11 @@ export function propertySchema(db: DbDef, field: FieldDef, databaseIds: Partial<
       return { created_time: {} };
     case 'last_edited_time':
       return { last_edited_time: {} };
+    // Notion computes these. We never provision or write them.
+    case 'auto_number':
+    case 'rollup':
+    case 'formula':
+      return null;
     case 'relation': {
       const targetId = field.relation ? databaseIds[field.relation] : undefined;
       // Relations are added in a second pass, once every database exists.
@@ -129,7 +134,7 @@ export function encodeValue(field: FieldDef, value: unknown): Record<string, unk
 export function encodeProperties(db: DbDef, values: Record<string, unknown>): Record<string, unknown> {
   const props: Record<string, unknown> = {};
   for (const field of db.fields) {
-    if (field.type === 'created_time' || field.type === 'last_edited_time') continue;
+    if (!isWritable(field)) continue;
     if (!(field.key in values)) continue;
     const encoded = encodeValue(field, values[field.key]);
     if (encoded !== undefined) props[field.label] = encoded;
@@ -190,6 +195,16 @@ export function decodeValue(field: FieldDef, prop: NotionPropertyValue | undefin
       return (prop.created_time as string | undefined) ?? null;
     case 'last_edited_time':
       return (prop.last_edited_time as string | undefined) ?? null;
+    case 'auto_number':
+      return (prop.unique_id as { prefix?: string; number?: number } | undefined)
+        ? [(prop.unique_id as { prefix?: string }).prefix, (prop.unique_id as { number?: number }).number]
+            .filter((v) => v !== null && v !== undefined)
+            .join('-')
+        : null;
+    case 'rollup':
+      return readRollup(prop.rollup);
+    case 'formula':
+      return readFormula(prop.formula);
     default:
       return null;
   }
@@ -208,6 +223,26 @@ function decodeFile(f: NotionFile): FileRef {
     url: f.file?.url ?? f.external?.url ?? '',
     expiryTime: f.file?.expiry_time,
   };
+}
+
+/** Rollups arrive wrapped by aggregation type. */
+function readRollup(value: unknown): unknown {
+  if (!value || typeof value !== 'object') return null;
+  const r = value as { type?: string; number?: number; array?: unknown[]; date?: { start?: string } };
+  if (r.type === 'number') return r.number ?? null;
+  if (r.type === 'date') return r.date?.start ?? null;
+  if (r.type === 'array') return r.array?.length ?? 0;
+  return null;
+}
+
+function readFormula(value: unknown): unknown {
+  if (!value || typeof value !== 'object') return null;
+  const f = value as { type?: string; string?: string; number?: number; boolean?: boolean; date?: { start?: string } };
+  if (f.type === 'string') return f.string ?? null;
+  if (f.type === 'number') return f.number ?? null;
+  if (f.type === 'boolean') return f.boolean ?? null;
+  if (f.type === 'date') return f.date?.start ?? null;
+  return null;
 }
 
 function defaultFor(field: FieldDef): unknown {

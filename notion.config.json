@@ -1,0 +1,16 @@
+{
+  "comment": "The Tarango Electric OS in Notion. Database ids are workspace addresses, not secrets \u2014 they are useless without NOTION_TOKEN. Override any of them with NOTION_DB_<KEY> in the environment.",
+  "parentPageId": "3e093196-5321-81ea-b65f-f77bd441f9f6",
+  "parentPageName": "Tarango Electric OS",
+  "databases": {
+    "jobs": "a3a099df-8563-4b13-8684-b1493c492d6c",
+    "customers": "3e33a5e1-fc64-47af-9201-c3af74593c84",
+    "hourLedger": "003c0f6d-3ad4-483b-856e-751ed6918ef8",
+    "rateBook": "c54e4a95-64f3-4e08-be94-35dc5126cc37",
+    "permits": "92b68dc3-ade9-4df5-b2a6-3fa09095aed4",
+    "referrals": "5b9f0c65-828c-4da0-a452-623505cc476b",
+    "equipment": "7776ae94-0d6e-481c-9629-b79c38ec3d03",
+    "territory": "b08f3ff5-b55f-4337-b913-3f24b682deb6",
+    "jobPhotos": "dd6a9dbf-2628-4fd6-b6e3-0a833ba24fb1"
+  }
+}

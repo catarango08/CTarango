@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1050 600" role="img" aria-label="Tarango Electric magnet">
+  <rect width="1050" height="600" rx="24" fill="#F5F1E8" stroke="#222426" stroke-width="8"/>
+  <text x="525" y="160" text-anchor="middle" font-family="Impact, 'Arial Narrow', sans-serif" font-size="96" letter-spacing="4" fill="#222426">TARANGO</text>
+  <rect x="280" y="180" width="490" height="6" fill="#B8871F"/>
+  <text x="525" y="230" text-anchor="middle" font-family="Georgia, serif" font-size="32" letter-spacing="10" fill="#222426">ELECTRIC</text>
+  <text x="525" y="290" text-anchor="middle" font-family="Georgia, serif" font-size="22" font-style="italic" fill="#8E382F">Show up. Fix it right.</text>
+  <text x="525" y="380" text-anchor="middle" font-family="Georgia, serif" font-size="20" letter-spacing="2" fill="#222426">SERVICE  ·  PANELS  ·  STANDBY  ·  FARM &amp; SHOP</text>
+  <text x="525" y="440" text-anchor="middle" font-family="Georgia, serif" font-size="18" letter-spacing="3" fill="#222426">BOLIVAR  ·  BUFFALO  ·  MARSHFIELD</text>
+  <text x="525" y="530" text-anchor="middle" font-family="Impact, 'Arial Narrow', sans-serif" font-size="36" fill="#B8871F">417-XXX-XXXX</text>
+</svg>

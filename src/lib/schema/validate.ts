@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { DbDef, FieldDef } from './types';
+import { isWritable } from './index';
 
 /**
  * Builds a Zod schema from a database definition so every API write is checked
@@ -66,7 +67,7 @@ function fieldSchema(field: FieldDef): z.ZodTypeAny {
 export function recordSchema(db: DbDef, { partial = false }: { partial?: boolean } = {}) {
   const shape: Record<string, z.ZodTypeAny> = {};
   for (const field of db.fields) {
-    if (field.type === 'created_time' || field.type === 'last_edited_time') continue;
+    if (!isWritable(field)) continue;
     const base = fieldSchema(field);
     shape[field.key] = field.required && !partial ? base : base.optional();
   }

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getStore } from '@/lib/store';
-import { applyDerived } from '@/lib/domain';
+import { applyDerived, syncJobPhotoFlag } from '@/lib/domain/writes';
 import { MAX_UPLOAD_BYTES } from '@/lib/notion/files';
 
 export const dynamic = 'force-dynamic';
@@ -25,17 +25,12 @@ export async function POST(request: Request) {
 
   const store = getStore();
   const jobId = str(form.get('job'));
-  const customerId = str(form.get('customer'));
-  const propertyId = str(form.get('property'));
   const takenById = str(form.get('takenBy'));
   const stage = str(form.get('stage')) || 'During';
   const captionBase = str(form.get('caption'));
   const location = str(form.get('location'));
   const notes = str(form.get('notes'));
-  const tags = str(form.get('tags'));
-  const includeInReport = str(form.get('includeInReport')) === 'true';
-  const gpsLat = form.get('gpsLat');
-  const gpsLng = form.get('gpsLng');
+  const customerOk = str(form.get('customerOk')) === 'true';
 
   const created = [];
   const failed: { name: string; reason: string }[] = [];
@@ -69,20 +64,23 @@ export async function POST(request: Request) {
         stage,
         takenAt: new Date().toISOString(),
         ...(jobId ? { job: [{ id: jobId }] } : {}),
-        ...(customerId ? { customer: [{ id: customerId }] } : {}),
-        ...(propertyId ? { property: [{ id: propertyId }] } : {}),
-        ...(takenById ? { takenBy: [{ id: takenById }] } : {}),
         ...(location ? { location } : {}),
         ...(notes ? { notes } : {}),
-        ...(tags ? { tags: tags.split(',').map((t) => t.trim()).filter(Boolean) } : {}),
-        includeInReport,
-        ...(gpsLat ? { gpsLat: Number(gpsLat) } : {}),
-        ...(gpsLng ? { gpsLng: Number(gpsLng) } : {}),
+        customerOk,
       });
 
       created.push(await store.create('jobPhotos', values));
     } catch (err) {
       failed.push({ name: file.name, reason: err instanceof Error ? err.message : 'Upload failed' });
+    }
+  }
+
+  // The Photos checkbox drives his Notion views, so keep it true to the photos.
+  if (created.length && jobId) {
+    try {
+      await syncJobPhotoFlag(jobId);
+    } catch {
+      // A stale checkbox is not worth failing the upload over.
     }
   }
 

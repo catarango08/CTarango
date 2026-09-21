@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 280" role="img" aria-label="Tarango Electric dark">
+  <rect width="800" height="280" fill="#222426"/>
+  <text x="400" y="130" text-anchor="middle" font-family="Impact, 'Arial Narrow', sans-serif" font-size="92" letter-spacing="6" fill="#F5F1E8">TARANGO</text>
+  <rect x="220" y="148" width="360" height="4" fill="#B8871F"/>
+  <text x="400" y="190" text-anchor="middle" font-family="Georgia, serif" font-size="28" letter-spacing="10" fill="#F5F1E8">ELECTRIC</text>
+  <text x="400" y="240" text-anchor="middle" font-family="Georgia, serif" font-size="16" font-style="italic" fill="#B8871F">Show up. Fix it right.</text>
+</svg>

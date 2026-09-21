@@ -1,14 +1,15 @@
 /**
- * Loads the sample electrical company into your Notion workspace.
+ * Loads sample rows into Notion. Use this on a scratch workspace, not on the
+ * live Tarango Electric OS — Jobs, Customers, Rate Book and Service Territory
+ * there already hold real records, and this would duplicate them.
  *
- *   npm run notion:seed            # create
- *   npm run notion:seed -- --dry   # print what would be written
+ *   npm run notion:seed -- --dry   # print what would be written (do this first)
+ *   npm run notion:seed            # write
+ *   npm run notion:seed -- --only jobPhotos,equipment
  *
- * Runs in two passes for the same reason the bootstrap does: relations can only
- * be written once both sides exist. Photo bytes are not seeded — the demo
- * images are generated SVGs, and Notion only accepts real uploads or public
- * URLs — so the sample rows arrive with their captions and metadata and you
- * attach real photos from the app.
+ * Photo bytes are not seeded: the sample images are generated SVGs and Notion
+ * takes real uploads or public URLs, so the rows arrive with captions and
+ * metadata and you attach real photos from the app.
  */
 import 'dotenv/config';
 import { NotionClient, NotionError } from '../src/lib/notion/client';
@@ -19,8 +20,17 @@ import { buildDemoData } from '../src/lib/store/demo-data';
 
 const dryRun = process.argv.includes('--dry');
 
+/** `--only jobs,equipment` limits the seed to those databases. */
+const onlyArg = process.argv.indexOf('--only');
+const only = onlyArg > -1 ? (process.argv[onlyArg + 1] ?? '').split(',').map((s) => s.trim()).filter(Boolean) : null;
+
 async function main() {
   const ids = databaseIds(true);
+  if (!dryRun && !only) {
+    console.warn('This writes sample rows into every database, including ones that already hold real records.');
+    console.warn('Run with --dry first, or scope it with --only <db,db>.\n');
+  }
+
   const missing = allDatabases().filter((db) => !ids[db.key]);
   if (missing.length) {
     console.error(`Missing database ids for: ${missing.map((d) => d.key).join(', ')}`);
@@ -36,6 +46,7 @@ async function main() {
 
   // ---- pass 1: create rows without relations or files ---------------
   for (const db of allDatabases()) {
+    if (only && !only.includes(db.key)) continue;
     const rows = data[db.key] ?? [];
     if (!rows.length) continue;
 
@@ -60,6 +71,7 @@ async function main() {
   // ---- pass 2: wire the relations ----------------------------------
   let linked = 0;
   for (const db of allDatabases()) {
+    if (only && !only.includes(db.key)) continue;
     const rows = data[db.key] ?? [];
     const relationFields = getDb(db.key).fields.filter((f) => f.type === 'relation');
     if (!rows.length || !relationFields.length) continue;
