@@ -4,7 +4,7 @@ import { restockList, truckValue } from '@/lib/domain/materials';
 import { getDb } from '@/lib/schema';
 import type { RecordValue } from '@/lib/schema';
 import { Card, Empty, PageHeader, Stat } from '@/components/ui';
-import { money } from '@/lib/format';
+import { money, dateShort } from '@/lib/format';
 import { num, round2 } from '@/lib/calc';
 import { StockControl } from './stock-control';
 
@@ -140,14 +140,25 @@ export default async function TruckPage({
                       {items.map((item) => {
                         const onTruck = num(item.onTruck);
                         const min = num(item.minOnTruck);
-                        const out = min > 0 && onTruck <= 0;
-                        const low = min > 0 && onTruck > 0 && onTruck <= min;
+                        const orderOnly = Boolean(item.orderForJob);
+                        const out = !orderOnly && min > 0 && onTruck <= 0;
+                        const low = !orderOnly && min > 0 && onTruck > 0 && onTruck <= min;
                         const qtyTone = out ? 'text-[color:var(--hazard)]' : low ? 'text-[color:var(--accent-ink)]' : 'text-[color:var(--ink)]';
                         return (
                           <li key={item.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
                             <div className="min-w-0 flex-1">
-                              <div className="text-sm font-medium">{String(item.name)}</div>
-                              <div className="mt-0.5 text-xs text-[color:var(--ink-muted)]">Bin {String(item.bin ?? '—')}</div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-sm font-medium">{String(item.name)}</span>
+                                {item.orderForJob ? (
+                                  <span className="chip min-h-0 px-1.5 py-0 text-[10px] uppercase tracking-[0.08em]">
+                                    Order for the job
+                                  </span>
+                                ) : null}
+                              </div>
+                              <div className="mt-0.5 text-xs text-[color:var(--ink-muted)]">
+                                Bin {String(item.bin ?? '—')}
+                                {item.lastCounted ? ` · counted ${dateShort(item.lastCounted)}` : ' · never counted'}
+                              </div>
                             </div>
                             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs tabular-nums text-[color:var(--ink-muted)]">
                               <span className={qtyTone}>

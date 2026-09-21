@@ -45,6 +45,42 @@ export const LEAD_SOURCES = ['Phone', 'Google', 'HVAC referral', 'Repeat', 'Magn
 /** Jobs → Town. Only towns the business already serves, plus the stop value. */
 export const JOB_TOWNS = ['Bolivar', 'Marshfield', 'Buffalo', 'Dallas Co', 'Webster Co', 'Polk Co', 'Other — STOP'] as const;
 
+/**
+ * Truck Inventory → Category. These are the seven sections of the printed
+ * truck-stock sheet, in the order you walk them on the Sunday count, followed
+ * by categories the van may grow into. Changing the order here changes the
+ * order of the count.
+ */
+export const TRUCK_CATEGORIES = [
+  'Breakers',
+  'Devices',
+  'Wire & Cable',
+  'Connectors & Fittings',
+  'Panel & Service',
+  'Generator',
+  'Consumables & Safety',
+  'Lighting',
+  'Boxes & Covers',
+  'Grounding',
+  'Fasteners',
+  'Specialty',
+] as const;
+
+/** Tools → Category. The tool sheet's sections, in count order. */
+export const TOOL_CATEGORIES = [
+  'Test & Measure',
+  'Hand',
+  'Power & Bend',
+  'Access & PPE',
+  'Generator Service',
+  'Shop / Truck',
+] as const;
+
+/** Where a tool is right now. Anything that lives at the house does not count. */
+export const TOOL_LOCATIONS = ['Truck', 'On body', 'Shop', 'Missing'] as const;
+
+export const TOOL_CONDITIONS = ['Good', 'Needs service', 'Needs calibration', 'Broken', 'Retired'] as const;
+
 export const PERMIT_STATES = ['None', 'Needed', 'Pulled', 'Inspected'] as const;
 
 export const TERRITORY_STATUSES = ['GO', 'VERIFY', 'NO-GO'] as const;
@@ -324,7 +360,7 @@ const truckInventory: DbDef = {
   fields: [
     { key: 'name', label: 'Item', type: 'title', required: true, column: true, placeholder: '12/2 NM-B, 250 ft roll' },
     { key: 'category', label: 'Category', type: 'select', column: true,
-      options: ['Wire & Cable', 'Breakers', 'Devices', 'Boxes & Covers', 'Conduit & Fittings', 'Lighting', 'Grounding', 'Connectors & Terminals', 'Fasteners', 'Consumables', 'Specialty'] },
+      options: TRUCK_CATEGORIES },
     { key: 'onTruck', label: 'On truck', type: 'number', column: true },
     { key: 'minOnTruck', label: 'Min on truck', type: 'number', column: true, help: 'At or below this, it goes on the restock list.' },
     { key: 'unit', label: 'Unit', type: 'select', options: ['ea', 'ft', 'box', 'roll', 'lot'] },
@@ -333,6 +369,8 @@ const truckInventory: DbDef = {
     { key: 'bin', label: 'Bin', type: 'text', column: true, help: 'Where it lives on the van.' },
     { key: 'supplier', label: 'Supplier', type: 'text' },
     { key: 'notes', label: 'Notes', type: 'longtext' },
+    { key: 'lastCounted', label: 'Last counted', type: 'date', column: true, help: 'Sunday count. The date you actually laid eyes on it.' },
+    { key: 'orderForJob', label: 'Order for the job', type: 'checkbox', help: 'Not truck stock. Ordered per job and billed as job material, so it never hits the restock list.' },
   ],
 };
 
@@ -360,7 +398,30 @@ const jobMaterials: DbDef = {
   ],
 };
 
+const tools: DbDef = {
+  key: 'tools',
+  existing: true,
+  label: 'Tools',
+  singular: 'Tool',
+  emoji: '🔧',
+  group: 'supply',
+  description:
+    'Every tool you own, where it lives, and what shape it is in. Tools are not stock — they do not get used up, they go missing, break, or come due for calibration. Have means it is on the truck or on your body; unchecked means buy or fetch before Monday.',
+  defaultSort: { key: 'name', direction: 'ascending' },
+  fields: [
+    { key: 'name', label: 'Tool', type: 'title', required: true, column: true, placeholder: 'Clamp meter (amp)' },
+    { key: 'category', label: 'Category', type: 'select', column: true, options: TOOL_CATEGORIES },
+    { key: 'have', label: 'Have', type: 'checkbox', column: true, help: 'On the truck or on your body. Unchecked means buy or fetch before Monday.' },
+    { key: 'location', label: 'Location', type: 'select', column: true, options: TOOL_LOCATIONS },
+    { key: 'condition', label: 'Condition', type: 'select', column: true, options: TOOL_CONDITIONS },
+    { key: 'lastChecked', label: 'Last checked', type: 'date', column: true, help: 'Sunday count.' },
+    { key: 'replacementCost', label: 'Replacement cost', type: 'money', column: true, help: 'What it costs to replace today. The total is what the insurance rider has to cover.' },
+    { key: 'serial', label: 'Serial / ID', type: 'text', help: 'Serial or your own paint-pen mark. Fill it in for anything worth stealing.' },
+    { key: 'notes', label: 'Note', type: 'longtext' },
+  ],
+};
+
 export const DATABASES = [
   jobs, jobPhotos, customers, hourLedger, rateBook, territory, permits, referrals, equipment,
-  truckInventory, jobMaterials,
+  truckInventory, jobMaterials, tools,
 ] as const;
