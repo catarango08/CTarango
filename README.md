@@ -61,6 +61,9 @@ npm install
 npm run dev          # http://localhost:3000
 ```
 
+On a phone or iPad, see [`docs/INSTALL.md`](docs/INSTALL.md) — it is installable
+to the home screen as a full-screen app with the TE mark.
+
 With no credentials it boots on sample data shaped like the real OS — the actual Rate Book and
 Service Territory rows, so the gates and the quote math behave correctly before Notion is wired
 up. See [`docs/NOTION.md`](docs/NOTION.md) to connect the live workspace; the database ids are
@@ -100,8 +103,11 @@ columns. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Known limits
 
-- **No authentication.** Put it behind something before it faces the internet. The Notion
-  token is server-side only, but the app assumes one trusted user.
+- **One shared passcode**, set with `APP_PASSCODE`, is the whole auth story — right for one
+  person, not for a crew with separate logins. Unset, the app is open; the setup screen says so
+  in red.
+- **No offline mode.** Server-rendered, so no signal means no app. Photos can be taken in the
+  camera app and attached later.
 - **Notion formulas are opaque to the API.** `Play`, `Lane`, `Ready` and `Closeout score` can
   be read but their source cannot. The app restates that logic from the OS pages that define
   it and shows Notion's `Play` alongside its own, so the two can be compared.

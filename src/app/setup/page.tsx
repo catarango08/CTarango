@@ -4,6 +4,7 @@ import { NotionClient } from '@/lib/notion/client';
 import { Card, PageHeader, Stat } from '@/components/ui';
 import { getStore } from '@/lib/store';
 import { HARD_LINES } from '@/lib/domain/rules';
+import { authRequired } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,6 +13,7 @@ export default async function SetupPage() {
   const ids = databaseIds(true);
   const missing = missingDatabases();
   const problems = validateSchema();
+  const locked = authRequired();
 
   let workspace: string | null = null;
   let tokenError: string | null = null;
@@ -35,8 +37,19 @@ export default async function SetupPage() {
         <Stat label="Reading from" value={getStore().kind === 'notion' ? 'Notion' : 'Sample data'} tone={notionConfigured() ? 'good' : 'warn'} />
         <Stat label="Integration token" value={hasToken ? (tokenError ? 'Rejected' : 'Present') : 'Missing'} tone={hasToken && !tokenError ? 'good' : 'bad'} />
         <Stat label="Databases wired" value={`${allDatabases().length - missing.length} / ${allDatabases().length}`} tone={missing.length ? 'warn' : 'good'} />
-        <Stat label="Schema check" value={problems.length ? `${problems.length} issues` : 'Clean'} tone={problems.length ? 'bad' : 'good'} />
+        <Stat label="Passcode" value={locked ? 'Set' : 'Not set'} tone={locked ? 'good' : 'bad'} />
       </section>
+
+      {!locked && (
+        <div className="mb-4 rounded border border-[color:var(--hazard)] bg-[color:var(--hazard-bg)] p-3">
+          <p className="text-sm font-semibold text-[color:var(--hazard)]">No passcode is set.</p>
+          <p className="mt-1 text-sm">
+            Fine on your own laptop. Not fine anywhere reachable from the internet — without{' '}
+            <span className="font-mono">APP_PASSCODE</span>, anyone with the address can read the customer
+            list and write to the OS. Set it before you deploy.
+          </p>
+        </div>
+      )}
 
       {tokenError && (
         <div className="mb-4 rounded border border-[color:var(--hazard)] bg-[color:var(--hazard-bg)] p-3 text-sm">

@@ -49,7 +49,7 @@ export function Sidebar({ storeKind }: { storeKind: 'notion' | 'demo' }) {
 
   return (
     <>
-      <div className="fixed inset-x-0 top-0 z-50 flex items-center gap-2 border-b border-[color:var(--line)] bg-[color:var(--surface)] px-3 py-2 lg:hidden">
+      <div className="safe-top safe-x fixed inset-x-0 top-0 z-50 flex items-center gap-2 border-b border-[color:var(--line)] bg-[color:var(--surface)] px-3 py-2 lg:hidden">
         <button type="button" onClick={() => setOpen((v) => !v)} className="btn" aria-label="Menu">☰</button>
         <Link href="/" className="flex items-center gap-2">
           <Monogram className="h-7 w-7 rounded" />
@@ -60,7 +60,7 @@ export function Sidebar({ storeKind }: { storeKind: 'notion' | 'demo' }) {
 
       <aside
         className={clsx(
-          'fixed inset-y-0 left-0 z-40 w-60 shrink-0 overflow-y-auto border-r border-[color:var(--line)] bg-[color:var(--surface)] px-3 py-4 transition-transform lg:translate-x-0',
+          'safe-top safe-bottom fixed inset-y-0 left-0 z-40 w-60 shrink-0 overflow-y-auto border-r border-[color:var(--line)] bg-[color:var(--surface)] px-3 py-4 transition-transform lg:translate-x-0',
           open ? 'translate-x-0' : '-translate-x-full',
         )}
       >

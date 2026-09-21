@@ -62,6 +62,25 @@ html, body {
   color: var(--ink);
 }
 
+/*
+ * Installed to the home screen, the app runs under the notch and over the home
+ * indicator, so every fixed edge pads itself back out with the safe-area insets.
+ */
+.safe-top { padding-top: env(safe-area-inset-top); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+.safe-x { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+
+/* No rubber-band scroll behind the app shell, and no tap-highlight flash. */
+body {
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Inputs below 16px make iOS zoom on focus. */
+@supports (-webkit-touch-callout: none) {
+  input, select, textarea { font-size: 16px; }
+}
+
 body {
   -webkit-font-smoothing: antialiased;
 }
