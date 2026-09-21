@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Tarango Electric">
+  <!-- The T and E are drawn as shapes, not type: an app icon must render the
+       same everywhere, and Impact is not a web-safe face. Proportions follow
+       the condensed wood-type feel of the wordmark. -->
+  <rect width="512" height="512" fill="#222426"/>
+  <g fill="#F5F1E8">
+    <rect x="132" y="86" width="248" height="46"/>
+    <rect x="233" y="86" width="46" height="152"/>
+  </g>
+  <rect x="132" y="256" width="248" height="12" fill="#B8871F"/>
+  <g fill="#B8871F">
+    <rect x="156" y="292" width="46" height="154"/>
+    <rect x="156" y="292" width="200" height="44"/>
+    <rect x="156" y="347" width="170" height="40"/>
+    <rect x="156" y="402" width="200" height="44"/>
+  </g>
+</svg>

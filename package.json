@@ -1,0 +1,35 @@
+{
+  "name": "tarango-electric-field-desk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Field desk for Tarango Electric \u2014 Bolivar, Missouri. Runs on the Tarango Electric OS in Notion.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "notion:bootstrap": "tsx scripts/bootstrap-notion.ts",
+    "notion:verify": "tsx scripts/verify-notion.ts",
+    "notion:seed": "tsx scripts/seed-notion.ts",
+    "brand:contrast": "node scripts/contrast.mjs"
+  },
+  "dependencies": {
+    "clsx": "2.1.1",
+    "date-fns": "4.1.0",
+    "next": "15.5.4",
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.3",
+    "@types/react": "19.1.9",
+    "@types/react-dom": "19.1.7",
+    "autoprefixer": "10.4.21",
+    "dotenv": "16.5.0",
+    "postcss": "8.5.6",
+    "tailwindcss": "3.4.17",
+    "tsx": "4.19.4",
+    "typescript": "5.8.3"
+  }
+}

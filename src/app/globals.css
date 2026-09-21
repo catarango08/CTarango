@@ -1,0 +1,151 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/**
+ * Two themes, both inside the brand lock.
+ *
+ *   Day   — Aged White paper, Charcoal type. The default: this is a truck app
+ *           and most of the work happens in Missouri daylight.
+ *   Night — Charcoal surfaces, Aged White type, for attics, crawl spaces and
+ *           after-dark service calls.
+ *
+ * Harvest Gold carries rules and accents in both. Oxide Red is restricted by
+ * the brand kit to the tagline and to hazard — it is never decoration, so it
+ * appears only on NO-GO towns, hazards and overdue money.
+ */
+
+:root,
+:root[data-theme='day'] {
+  --bg: #F5F1E8;
+  --surface: #FBF9F4;
+  --surface-2: #EDE7DA;
+  --ink: #222426;
+  --ink-muted: #63615B;
+  --line: #DED6C4;
+  --line-strong: #C4BAA3;
+  --accent: #B8871F;
+  --accent-ink: #7A570F;
+  --on-accent: #222426;
+  --hazard: #8E382F;            /* 6.76:1 on paper */
+  --hazard-fill: #8E382F;
+  --hazard-bg: #8E382F14;
+  --go: #3F6B4A;                /* 5.46:1 */
+  --go-bg: #3F6B4A14;
+  /* The light wordmark sets the tagline in Oxide Red; the dark one in gold. */
+  --tagline: #8E382F;
+}
+
+:root[data-theme='night'] {
+  --bg: #17191A;
+  --surface: #222426;
+  --surface-2: #2B2E30;
+  --ink: #F5F1E8;
+  --ink-muted: #9A968C;
+  --line: #34383B;
+  --line-strong: #454A4E;
+  --accent: #D9A441;
+  --accent-ink: #E3BC6B;
+  --on-accent: #222426;
+  /* #C9614F only reaches 3.94:1 on charcoal, so hazard TEXT lifts to oxide-300
+     while fills keep the locked value underneath Aged White type. */
+  --hazard: #D98A7C;            /* 5.84:1 on charcoal */
+  --hazard-fill: #8E382F;
+  --hazard-bg: #8E382F40;
+  --go: #7FB08C;                /* 6.30:1 */
+  --go-bg: #7FB08C1F;
+  --tagline: #B8871F;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+/*
+ * Installed to the home screen, the app runs under the notch and over the home
+ * indicator, so every fixed edge pads itself back out with the safe-area insets.
+ */
+.safe-top { padding-top: env(safe-area-inset-top); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+.safe-x { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+
+/* No rubber-band scroll behind the app shell, and no tap-highlight flash. */
+body {
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Inputs below 16px make iOS zoom on focus. */
+@supports (-webkit-touch-callout: none) {
+  input, select, textarea { font-size: 16px; }
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .panel {
+    @apply rounded-lg border border-[color:var(--line)] bg-[color:var(--surface)];
+  }
+  .panel-2 {
+    @apply rounded-md border border-[color:var(--line)] bg-[color:var(--surface-2)];
+  }
+
+  /*
+   * The gold rule under TARANGO in the wordmark. The kit says "keep one gold
+   * rule" — one per composition, so this marks the page header and nothing
+   * else. Gold is never body text: at 2.86:1 on paper it fails AA, which is
+   * also why the kit restricts it to "rules, badge ring, small type".
+   */
+  .rule-gold {
+    @apply h-[3px] w-full bg-[color:var(--accent)];
+  }
+
+  .label {
+    @apply font-serif text-[11px] uppercase tracking-[0.14em] text-[color:var(--ink-muted)];
+  }
+  .display {
+    @apply font-display uppercase tracking-[0.04em];
+  }
+
+  .btn {
+    @apply inline-flex items-center gap-1.5 rounded-md border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-3 py-1.5 text-sm font-medium text-[color:var(--ink)] transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent-ink)];
+  }
+  .btn-primary {
+    @apply inline-flex items-center gap-1.5 rounded-md bg-[color:var(--accent)] px-3.5 py-1.5 text-sm font-semibold text-[color:var(--on-accent)] transition hover:brightness-110;
+  }
+  .btn-hazard {
+    @apply inline-flex items-center gap-1.5 rounded-md border border-[color:var(--hazard)] bg-[color:var(--hazard-bg)] px-3 py-1.5 text-sm font-semibold text-[color:var(--hazard)] transition hover:brightness-110;
+  }
+
+  .input {
+    @apply w-full rounded-md border border-[color:var(--line-strong)] bg-[color:var(--bg)] px-3 py-2 text-sm text-[color:var(--ink)] outline-none transition placeholder:text-[color:var(--ink-muted)] focus:border-[color:var(--accent)];
+  }
+
+  .th {
+    @apply whitespace-nowrap px-3 py-2 text-left font-serif text-[11px] uppercase tracking-[0.12em] text-[color:var(--ink-muted)];
+  }
+  .td {
+    @apply px-3 py-2.5 align-top text-sm;
+  }
+  .chip {
+    @apply inline-flex items-center rounded border border-[color:var(--line-strong)] bg-[color:var(--surface-2)] px-1.5 py-0.5 text-xs text-[color:var(--ink-muted)];
+  }
+
+  /* Printed documents keep the paper look in either theme. */
+  .paper {
+    @apply rounded-md border border-charcoal/15 bg-paper text-charcoal;
+  }
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+@media print {
+  body { background: #fff; color: #222426; }
+  .no-print { display: none !important; }
+}
