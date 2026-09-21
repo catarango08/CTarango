@@ -3,7 +3,7 @@
 The app reads and writes the databases that already exist in the workspace. It does not
 create a parallel set, and it does not migrate anything.
 
-## The nine databases
+## The twelve databases
 
 | Key | Notion database | Origin |
 | --- | --- | --- |
@@ -16,10 +16,38 @@ create a parallel set, and it does not migrate anything.
 | `referrals` | Referrals | already in the OS |
 | `equipment` | Equipment Log | already in the OS |
 | `jobPhotos` | Job Photos | **added by this app** |
+| `truckInventory` | Truck Inventory | **added by this app** |
+| `jobMaterials` | Job Materials | **added by this app** |
+| `tools` | Tools | **added by this app** |
 
 Their ids are checked into `notion.config.json`. They are workspace addresses, not secrets —
 useless without a token — and keeping them in the repo means the only thing to configure is
 `NOTION_TOKEN`. Any of them can be overridden with `NOTION_DB_<KEY>` in the environment.
+
+## Why Tools is separate from Truck Inventory
+
+They look alike on paper and behave nothing alike.
+
+Stock depletes. A breaker leaves the van, the count drops, and when it crosses `Min on truck`
+it lands on the restock list. Quantity is the whole point.
+
+A tool does not deplete. You own it or you do not. It goes missing, it breaks, it comes due for
+calibration — and none of that is a quantity. Modelling a torque screwdriver as "1 on truck,
+min 1" would put it on a supply-house shopping list every time it was in the other bag.
+
+So `tools` carries `Have`, `Location`, `Condition` and `Last checked` instead of counts, and a
+`Replacement cost` whose total is what the insurance rider has to cover. `Have` means on the
+truck or on your body — the tool sheet's rule: if it lives at the house it does not count.
+
+## Truck Inventory categories are the count sheet
+
+`TRUCK_CATEGORIES` in `src/lib/schema/databases.ts` is not an arbitrary taxonomy. It is the
+seven sections of the printed truck-stock sheet, in the order you walk them on the Sunday
+count, followed by sections the van may grow into. Reordering that array reorders the count.
+
+Two lines carry `Order for the job` instead of a minimum — the 200A meter-main and the 125A
+subpanel. They are job material, not van stock, so they are deliberately excluded from the
+restock list rather than sitting on it permanently at zero.
 
 ## Why Job Photos was added
 
