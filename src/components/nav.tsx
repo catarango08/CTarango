@@ -21,6 +21,7 @@ const SECTIONS: { heading: string; items: { href: string; label: string }[] }[] 
     heading: 'Money',
     items: [
       { href: '/rates', label: 'Rate book' },
+      { href: '/truck', label: 'Truck stock' },
       { href: '/hours', label: 'Hours to license' },
     ],
   },

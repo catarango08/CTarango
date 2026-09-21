@@ -6,6 +6,7 @@ export { DATABASES } from './databases';
 export {
   JOB_STATUSES, TERMINAL_STATUSES, JOB_TYPES, LEAD_SOURCES, JOB_TOWNS,
   PERMIT_STATES, TERRITORY_STATUSES, PHOTO_STAGES, REQUIRED_PHOTO_STAGES,
+  ARRIVAL_PHOTO_STAGES, COMPLETION_PHOTO_STAGES,
 } from './databases';
 
 const BY_KEY = new Map<DbKey, DbDef>(DATABASES.map((d) => [d.key, d as DbDef]));
@@ -61,11 +62,12 @@ export const GROUP_LABELS: Record<DbGroup, string> = {
   crm: 'Customers',
   money: 'Money',
   license: 'License file',
+  supply: 'Supply',
   reference: 'Reference',
 };
 
 export function databasesByGroup(): { group: DbGroup; label: string; dbs: DbDef[] }[] {
-  const order: DbGroup[] = ['field', 'crm', 'money', 'license', 'reference'];
+  const order: DbGroup[] = ['field', 'crm', 'money', 'license', 'supply', 'reference'];
   return order.map((group) => ({
     group,
     label: GROUP_LABELS[group],

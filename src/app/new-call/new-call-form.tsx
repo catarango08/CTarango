@@ -55,6 +55,41 @@ export function NewCallForm({ territory, customers }: { territory: TownRow[]; cu
     return loose ?? 'Other — STOP';
   }
 
+  /**
+   * Create the card right now and go finish it on the ticket.
+   *
+   * The phone is still to his ear and the details are still coming. Waiting
+   * until the form is complete loses calls, so this writes what exists and
+   * gets out of the way — no template to duplicate, no blank row to find later.
+   */
+  async function startCardNow() {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/records/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim() || (town.trim() ? `New call — ${town.trim()}` : 'New call'),
+          status: 'New call',
+          type,
+          source,
+          town: townSelectValue(),
+          phone: phone.trim(),
+          notes: problem.trim(),
+          nextAction: 'Finish the intake. Ask town, what is dead, and when they need you.',
+        }),
+      });
+      const body = (await res.json().catch(() => ({}))) as { record?: { id: string }; error?: string };
+      if (!res.ok) throw new Error(body.error ?? 'Could not start the card');
+      router.push(body.record?.id ? `/jobs/${body.record.id}` : '/jobs');
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not start the card');
+      setBusy(false);
+    }
+  }
+
   async function submit(intent: 'book' | 'qualify' | 'nogo') {
     setBusy(true);
     setError(null);
@@ -118,6 +153,17 @@ export function NewCallForm({ territory, customers }: { territory: TownRow[]; cu
 
   return (
     <div className="space-y-4">
+      {/* Straight to a card. The gated path below is the considered version;
+          this is for when the phone is already ringing. */}
+      <section className="panel flex flex-wrap items-center justify-between gap-3 p-3">
+        <span className="text-sm text-[color:var(--ink-muted)]">
+          Phone in your hand? Start the card now and finish it on the ticket.
+        </span>
+        <button type="button" className="btn min-h-11" disabled={busy} onClick={() => void startCardNow()}>
+          {busy ? 'Starting…' : 'Start a card now'}
+        </button>
+      </section>
+
       {/* Step one: the town. */}
       <section className="panel p-4">
         <div className="label">Step one</div>

@@ -60,7 +60,7 @@ export interface FieldDef {
   placeholder?: string;
 }
 
-export type DbGroup = 'field' | 'crm' | 'money' | 'license' | 'reference';
+export type DbGroup = 'field' | 'crm' | 'money' | 'license' | 'supply' | 'reference';
 
 export interface DbDef {
   key: DbKey;
@@ -92,7 +92,9 @@ export type DbKey =
   | 'referrals'
   | 'equipment'
   | 'territory'
-  | 'jobPhotos';
+  | 'jobPhotos'
+  | 'truckInventory'
+  | 'jobMaterials';
 
 /** A record as the app sees it: plain JSON, Notion page id under `id`. */
 export interface RecordValue {

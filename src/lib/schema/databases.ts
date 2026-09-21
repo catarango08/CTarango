@@ -49,21 +49,32 @@ export const PERMIT_STATES = ['None', 'Needed', 'Pulled', 'Inspected'] as const;
 
 export const TERRITORY_STATUSES = ['GO', 'VERIFY', 'NO-GO'] as const;
 
-/** Job Photos → Stage. The four the closeout card requires, plus the extras
- *  the hidden-damage protocol asks for. */
+/** Job Photos → Stage. */
 export const PHOTO_STAGES = [
   'Before',
-  'Panel / nameplate',
+  'Service entry',
+  'Panel',
+  'Other',
   'Completed work',
   'Torque / labeling',
   'Hidden damage',
-  'Meter / service',
   'Permit',
-  'Other',
 ] as const;
 
-/** The four stages a job must carry before it can close. */
-export const REQUIRED_PHOTO_STAGES = ['Before', 'Panel / nameplate', 'Completed work'] as const;
+/**
+ * What the arrival intake asks for, before a hand goes on a tool. Each one
+ * takes as many photos as the site needs.
+ */
+export const ARRIVAL_PHOTO_STAGES = ['Before', 'Service entry', 'Panel', 'Other'] as const;
+
+/** Stages that only make sense once the work is done. */
+export const COMPLETION_PHOTO_STAGES = ['Completed work', 'Torque / labeling', 'Permit'] as const;
+
+/**
+ * The stages a job must carry before it can close. Service entry is not on
+ * this list on purpose — plenty of jobs never touch the service.
+ */
+export const REQUIRED_PHOTO_STAGES = ['Before', 'Panel', 'Completed work'] as const;
 
 /* ------------------------------------------------------------------ *
  * Field work
@@ -91,12 +102,23 @@ const jobs: DbDef = {
     { key: 'window', label: 'Window', type: 'text', placeholder: 'Tue 8–10 AM' },
     { key: 'callIn', label: 'Call in', type: 'date', column: true },
     { key: 'onSite', label: 'On site', type: 'date', column: true },
+    { key: 'estTravelMin', label: 'Est travel min', type: 'number', help: 'Forecast one-way drive from Bolivar.' },
+    { key: 'estHours', label: 'Est hours', type: 'number', help: 'Forecast before you roll. Compare against install hours after.' },
+    { key: 'arrived', label: 'Arrived', type: 'datetime', help: 'Stamped when you tap On site.' },
+    { key: 'departed', label: 'Departed', type: 'datetime' },
     { key: 'amount', label: 'Amount', type: 'money', column: true },
     { key: 'installHours', label: 'Install hours', type: 'number', help: 'Tools on the work. This is what counts toward the license.' },
     { key: 'driveHours', label: 'Drive hours', type: 'number', help: 'Windshield time. Never counts toward the license.' },
     { key: 'nextAction', label: 'Next action', type: 'text' },
-    { key: 'notes', label: 'Notes', type: 'longtext' },
+    { key: 'notes', label: 'Notes', type: 'longtext', help: 'What they said on the phone. In their words.' },
+    { key: 'siteConditions', label: 'Site conditions', type: 'longtext', help: 'What you found on arrival: access, hazards, what the panel looks like.' },
+    { key: 'diagnosis', label: 'Diagnosis', type: 'longtext', help: 'What is actually wrong, and how you know.' },
+    { key: 'workPerformed', label: 'Work performed', type: 'longtext', help: 'Goes on the invoice and the customer copy.' },
+    { key: 'testResults', label: 'Test results', type: 'longtext', help: 'Readings, torque values, megger results. The defensible record.' },
+    { key: 'recommendations', label: 'Recommendations', type: 'longtext', help: 'Future work you spotted. The best lead source you have.' },
     { key: 'signed', label: 'Signed', type: 'checkbox', help: 'Estimate signed or invoice filled.' },
+    { key: 'signedBy', label: 'Signed by', type: 'text' },
+    { key: 'paymentMethod', label: 'Payment method', type: 'select', options: ['Cash', 'Check', 'Card', 'ACH', 'Net 15', 'Financing'] },
     { key: 'depositIn', label: 'Deposit in', type: 'checkbox', help: 'Required at 50% over $1,500.' },
     { key: 'paid', label: 'Paid', type: 'checkbox' },
     { key: 'closeoutDone', label: 'Closeout done', type: 'checkbox' },
@@ -106,6 +128,7 @@ const jobs: DbDef = {
     { key: 'hiddenDamage', label: 'Hidden damage', type: 'checkbox', help: 'Logged if anything extra was found.' },
     { key: 'customer', label: 'Customer', type: 'relation', relation: 'customers', dualLabel: 'Jobs' },
     { key: 'hourEntries', label: 'Hour entries', type: 'relation', relation: 'hourLedger', dualLabel: 'Job' },
+    { key: 'materials', label: 'Materials', type: 'relation', relation: 'jobMaterials', dualLabel: 'Job' },
     { key: 'hoursLogged', label: 'Hours logged', type: 'rollup', readOnly: true, help: 'Sum of install hours on the linked ledger entries.' },
     { key: 'lane', label: 'Lane', type: 'formula', readOnly: true },
     { key: 'play', label: 'Play', type: 'formula', readOnly: true, help: 'Notion’s own next-button text.' },
@@ -285,6 +308,59 @@ const equipment: DbDef = {
   ],
 };
 
+/* ------------------------------------------------------------------ *
+ * Supply
+ * ------------------------------------------------------------------ */
+
+const truckInventory: DbDef = {
+  key: 'truckInventory',
+  existing: true,
+  label: 'Truck Inventory',
+  singular: 'Item',
+  emoji: '🚚',
+  group: 'supply',
+  description: 'What is on the van right now. Anything at or below its minimum lands on the restock list, so you hit the supply house once instead of mid-job.',
+  defaultSort: { key: 'name', direction: 'ascending' },
+  fields: [
+    { key: 'name', label: 'Item', type: 'title', required: true, column: true, placeholder: '12/2 NM-B, 250 ft roll' },
+    { key: 'category', label: 'Category', type: 'select', column: true,
+      options: ['Wire & Cable', 'Breakers', 'Devices', 'Boxes & Covers', 'Conduit & Fittings', 'Lighting', 'Grounding', 'Connectors & Terminals', 'Fasteners', 'Consumables', 'Specialty'] },
+    { key: 'onTruck', label: 'On truck', type: 'number', column: true },
+    { key: 'minOnTruck', label: 'Min on truck', type: 'number', column: true, help: 'At or below this, it goes on the restock list.' },
+    { key: 'unit', label: 'Unit', type: 'select', options: ['ea', 'ft', 'box', 'roll', 'lot'] },
+    { key: 'cost', label: 'Cost', type: 'money', column: true },
+    { key: 'sellPrice', label: 'Sell price', type: 'money' },
+    { key: 'bin', label: 'Bin', type: 'text', column: true, help: 'Where it lives on the van.' },
+    { key: 'supplier', label: 'Supplier', type: 'text' },
+    { key: 'notes', label: 'Notes', type: 'longtext' },
+  ],
+};
+
+const jobMaterials: DbDef = {
+  key: 'jobMaterials',
+  existing: true,
+  label: 'Job Materials',
+  singular: 'Material Line',
+  emoji: '🧰',
+  group: 'supply',
+  description: 'What actually went into each job. Truck-stock lines pull the van count down; everything bills at cost plus 35%.',
+  defaultSort: { key: 'usedOn', direction: 'descending' },
+  fields: [
+    { key: 'name', label: 'Line', type: 'title', required: true, column: true },
+    { key: 'job', label: 'Job', type: 'relation', relation: 'jobs', dualLabel: 'Materials', column: true },
+    { key: 'item', label: 'Item', type: 'relation', relation: 'truckInventory', dualLabel: 'Used on', column: true },
+    { key: 'quantity', label: 'Qty', type: 'number', column: true },
+    { key: 'unitCost', label: 'Unit cost', type: 'money', column: true },
+    { key: 'extendedCost', label: 'Extended cost', type: 'money', column: true, derived: true, help: 'Qty x unit cost, before the 35% markup.' },
+    { key: 'source', label: 'Source', type: 'select', options: ['Truck stock', 'Supply house', 'Customer supplied', 'Special order'], column: true },
+    { key: 'billable', label: 'Billable', type: 'checkbox', column: true },
+    { key: 'pulledFromTruck', label: 'Pulled from truck', type: 'checkbox', derived: true, help: 'Set once the van count has been decremented.' },
+    { key: 'usedOn', label: 'Used on', type: 'date', column: true },
+    { key: 'notes', label: 'Notes', type: 'longtext' },
+  ],
+};
+
 export const DATABASES = [
   jobs, jobPhotos, customers, hourLedger, rateBook, territory, permits, referrals, equipment,
+  truckInventory, jobMaterials,
 ] as const;
