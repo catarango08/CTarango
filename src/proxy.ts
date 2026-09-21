@@ -5,8 +5,10 @@ import { SESSION_COOKIE, authRequired, passcode, verifyToken } from '@/lib/auth'
  * Everything is behind the passcode except the login screen itself and the
  * files iOS needs before a session exists (icons, manifest) so the home-screen
  * install still shows the right mark on the lock screen.
+ *
+ * Next 16 renamed the `middleware` file convention to `proxy`.
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   if (!authRequired()) return NextResponse.next();
 
   const secret = passcode();

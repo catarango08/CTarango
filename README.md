@@ -89,6 +89,7 @@ see [`docs/BRAND.md`](docs/BRAND.md) for the ratios and the full do-not-print li
 ## Architecture
 
 ```
+src/proxy.ts        the passcode gate (Next 16 renamed this convention from middleware)
 src/lib/schema/     the 9 Notion databases, with their exact property names
 src/lib/domain/     rules, gates, playbook, quote math — the business, in one place
 src/lib/notion/     REST client, property mapper, file uploads, id registry

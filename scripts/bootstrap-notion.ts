@@ -16,6 +16,7 @@ import { NotionClient, NotionError, normalizeId } from '../src/lib/notion/client
 import { propertySchema } from '../src/lib/notion/mapper';
 import { databaseIds, envVarFor, writeIdFile, type DatabaseIdMap } from '../src/lib/notion/registry';
 import { allDatabases, validateSchema } from '../src/lib/schema';
+import notionConfig from '../notion.config.json';
 
 const dryRun = process.argv.includes('--dry');
 
@@ -32,7 +33,7 @@ async function main() {
   console.log(`Connected as "${me.bot?.workspace_name ?? me.name ?? 'integration'}".${dryRun ? ' (dry run)' : ''}\n`);
 
   const ids: DatabaseIdMap = { ...databaseIds(true) };
-  const parentPageId = normalizeId(process.env.NOTION_PARENT_PAGE_ID ?? readConfigParent());
+  const parentPageId = normalizeId(process.env.NOTION_PARENT_PAGE_ID ?? notionConfig.parentPageId);
 
   // ---- existing databases: verify, then top up missing properties ----
   for (const db of allDatabases().filter((d) => d.existing)) {
@@ -122,12 +123,6 @@ async function main() {
   console.log('\nDatabase ids:');
   for (const db of allDatabases()) console.log(`${envVarFor(db.key)}=${ids[db.key] ?? ''}`);
   console.log('\nNext: `npm run notion:verify` to confirm every property matches the schema.');
-}
-
-function readConfigParent(): string {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const config = require('../notion.config.json') as { parentPageId: string };
-  return config.parentPageId;
 }
 
 main().catch((err) => {
