@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import notionConfig from '../../../notion.config.json';
 import type { DbKey } from '../schema';
 import { allDatabases } from '../schema';
 import { normalizeId } from './client';
@@ -7,8 +8,6 @@ import { normalizeId } from './client';
 export type DatabaseIdMap = Partial<Record<DbKey, string>>;
 
 const ID_FILE = process.env.NOTION_ID_FILE ?? path.join(process.cwd(), '.notion-ids.json');
-/** Checked in: the Tarango Electric OS databases that already exist. */
-const CONFIG_FILE = path.join(process.cwd(), 'notion.config.json');
 
 let cached: DatabaseIdMap | null = null;
 
@@ -42,16 +41,22 @@ export function databaseIds(refresh = false): DatabaseIdMap {
     if (fromEnv) map[db.key] = fromEnv;
   }
 
-  for (const file of [ID_FILE, CONFIG_FILE]) {
-    if (!fs.existsSync(file)) continue;
+  // Written by the bootstrap when pointing at a different workspace. It never
+  // exists on a deployed build, so the filesystem is only touched locally.
+  if (process.env.NODE_ENV !== 'production' && fs.existsSync(ID_FILE)) {
     try {
-      const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as { databases?: DatabaseIdMap };
+      const parsed = JSON.parse(fs.readFileSync(ID_FILE, 'utf8')) as { databases?: DatabaseIdMap };
       for (const [key, value] of Object.entries(parsed.databases ?? {})) {
         if (!map[key as DbKey] && typeof value === 'string') map[key as DbKey] = value;
       }
     } catch {
-      console.warn(`[tarango] Could not read ${file} — ignoring it.`);
+      console.warn(`[tarango] Could not read ${ID_FILE} — ignoring it.`);
     }
+  }
+
+  // The checked-in Tarango Electric OS ids, bundled at build time.
+  for (const [key, value] of Object.entries(notionConfig.databases ?? {})) {
+    if (!map[key as DbKey] && typeof value === 'string') map[key as DbKey] = value;
   }
 
   for (const [key, value] of Object.entries(map)) {

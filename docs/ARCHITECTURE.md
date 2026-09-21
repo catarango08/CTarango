@@ -68,6 +68,24 @@ decline, never an accidental quote outside the footprint.
 **Drive hours never reach the ledger.** `logHoursToLedger()` writes install hours only, and
 subtracts what is already logged so closing a job twice cannot inflate the license file.
 
+## The passcode gate runs in the proxy
+
+`src/proxy.ts` — what Next called `middleware` before 16 — checks the signed
+cookie on every request except the login screen and the icon/manifest files iOS
+needs before a session exists. API routes get a 401 rather than a redirect.
+
+Because the gate is edge code, a framework CVE in that layer is an auth bug
+here, not just a dependency warning. That is why the Next version is pinned
+exactly and why `npm audit` is expected to read zero.
+
+## The Notion config is bundled, not read from disk
+
+`notion.config.json` is a static import. Reading it with `fs` at runtime worked
+locally but is fragile on serverless, where the function's working directory is
+not guaranteed to hold the repo — a miss would silently fall back to sample data
+in production. The optional `.notion-ids.json` is still read from disk, but only
+outside production, where the bootstrap writes it.
+
 ## Request-level memoization
 
 List screens read whole tables — that is how a relation's display label is resolved without an
