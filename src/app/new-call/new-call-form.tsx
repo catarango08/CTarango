@@ -17,7 +17,15 @@ interface CustomerRow { id: string; name: string; phone: string; town: string }
  * for one is a No-go ticket. That is the rule the OS states — "Town first. Red
  * or unknown → Status No-go" — enforced here rather than left to memory.
  */
-export function NewCallForm({ territory, customers }: { territory: TownRow[]; customers: CustomerRow[] }) {
+export function NewCallForm({
+  territory,
+  customers,
+  diagnostics,
+}: {
+  territory: TownRow[];
+  customers: CustomerRow[];
+  diagnostics: { residential: number; commercial: number };
+}) {
   const router = useRouter();
   const [town, setTown] = useState('');
   const [name, setName] = useState('');
@@ -97,10 +105,10 @@ export function NewCallForm({ territory, customers }: { territory: TownRow[]; cu
     const status = intent === 'book' ? 'Booked' : intent === 'qualify' ? 'Qualify' : 'No-go';
     const nextAction =
       intent === 'book'
-        ? `Text them the window. Diagnostic $${type === 'Commercial' || type === 'Standby / Critical' ? 149 : 119}.`
+        ? `Text them the window. Diagnostic $${type === 'Commercial' || type === 'Standby / Critical' ? diagnostics.commercial : diagnostics.residential} plus any zone add.`
         : intent === 'qualify'
           ? `Call the AHJ in ${verdict.town} before quoting.`
-          : 'Stop. Declined politely — outside the footprint until licensed.';
+          : 'Stop. Declined politely: outside our service area.';
 
     try {
       let customerId = existing?.id ?? null;

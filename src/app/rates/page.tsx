@@ -3,7 +3,8 @@ import { loadAll } from '@/lib/data';
 import type { RecordValue } from '@/lib/schema';
 import { Card, PageHeader, Stat } from '@/components/ui';
 import { QuoteBuilder } from './quote-builder';
-import { MONEY, TRAVEL_ZONES, CLOSED_WORK } from '@/lib/domain/rules';
+import { MONEY, CLOSED_WORK, PROMO } from '@/lib/domain/rules';
+import { ZONE_LABELS, pricingFromRateBook, type ZoneNumber } from '@/lib/domain/pricing';
 import { money } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
@@ -13,6 +14,9 @@ const BOOK_ORDER = ['Residential flat', 'Labor / dispatch', 'Commercial / critic
 export default async function RatesPage({ searchParams }: { searchParams: Promise<{ book?: string }> }) {
   const { book } = await searchParams;
   const rates = await loadAll('rateBook');
+  const pricing = pricingFromRateBook(rates);
+  const r = pricing.residential;
+  const c = pricing.commercial;
   const shown = book ? rates.filter((r) => String(r.book) === book) : rates;
 
   return (
@@ -24,14 +28,15 @@ export default async function RatesPage({ searchParams }: { searchParams: Promis
       />
 
       <section className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Residential diagnostic" value={`$${MONEY.residentialDiagnostic}`} hint="Credited if repaired same visit" />
-        <Stat label="Commercial" value={`$${MONEY.commercialDiagnostic}`} hint={`Then $${MONEY.commercialHourly}/hr`} />
+        <Stat label="Day trip / diagnostic" value={`$${r.trip.day}`} hint={`Zone 1 + first hour, then $${r.hourly.day}/hr`} />
+        <Stat label="Commercial diagnostic" value={`$${c.trip.day}`} hint={`Then $${c.hourly.day}/hr`} />
         <Stat label="Materials" value={`+${MONEY.materialsMarkup * 100}%`} hint="On your cost" />
         <Stat label="Deposit" value={`${MONEY.depositRate * 100}%`} hint={`Over ${money(MONEY.depositThreshold, true)}`} />
       </section>
 
       <Card title="Quote builder" className="mb-5">
         <QuoteBuilder
+          pricing={pricing}
           rates={rates
             .filter((r) => r.active !== false)
             .map((r) => ({
@@ -72,18 +77,36 @@ export default async function RatesPage({ searchParams }: { searchParams: Promis
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <Card title="Travel">
+        <Card title="Trips and zones (from Elkland)">
           <ul className="space-y-2 text-sm">
-            {TRAVEL_ZONES.map((zone) => (
-              <li key={zone.zone} className="flex items-baseline justify-between gap-3">
+            {([1, 2, 3] as ZoneNumber[]).map((z) => (
+              <li key={z} className="flex items-baseline justify-between gap-3">
                 <span>
-                  <span className="font-semibold">Zone {zone.zone}</span>
-                  <span className="ml-2 text-[color:var(--ink-muted)]">{zone.label}</span>
+                  <span className="font-semibold">Zone {z}</span>
+                  <span className="ml-2 text-[color:var(--ink-muted)]">{ZONE_LABELS[z]}</span>
                 </span>
-                <span className="tabular-nums">{zone.fee === 0 ? zone.note : `$${zone.fee}`}</span>
+                <span className="tabular-nums">${pricing.zones[z]}</span>
               </li>
             ))}
           </ul>
+          <table className="mt-3 w-full text-sm tabular-nums">
+            <thead>
+              <tr className="text-left text-xs text-[color:var(--ink-muted)]">
+                <th className="font-normal">Trip</th><th className="font-normal">Residential</th><th className="font-normal">Commercial</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Day</td><td>${r.trip.day} · ${r.hourly.day}/hr</td><td>${c.trip.day} · ${c.hourly.day}/hr</td></tr>
+              <tr><td>After hours</td><td>${r.trip.afterHours} · ${r.hourly.afterHours}/hr</td><td>${c.trip.afterHours} · ${c.hourly.afterHours}/hr</td></tr>
+              <tr><td>Emergency</td><td>${r.trip.emergency} · ${r.hourly.emergency}/hr</td><td>${c.trip.emergency} · ${c.hourly.emergency}/hr</td></tr>
+              <tr><td>Holiday</td><td>${r.trip.holiday} · ${r.hourly.holiday}/hr</td><td>${c.trip.holiday} · ${c.hourly.holiday}/hr</td></tr>
+            </tbody>
+          </table>
+          <p className="mt-2 text-xs text-[color:var(--ink-muted)]">
+            Every trip includes the Zone 1 trip and the first hour. Zones 2 and 3 add the difference over Zone 1, never multiplied.
+            Flats are plus the zone fee. LOTO add-on has no trip fee.
+            {pricing.source !== 'notion' && ' Some numbers are fallbacks: a Rate Book row was missing.'}
+          </p>
         </Card>
 
         <Card title="Money rules">
@@ -91,9 +114,12 @@ export default async function RatesPage({ searchParams }: { searchParams: Promis
             <li>Materials cost + {MONEY.materialsMarkup * 100}%.</li>
             <li>Deposit {MONEY.depositRate * 100}% over {money(MONEY.depositThreshold, true)}.</li>
             <li>Old work +{MONEY.oldWorkSurcharge * 100}% — a known condition, not hidden damage.</li>
-            <li>After hours {MONEY.afterHoursMultiplier}×. Holiday {MONEY.holidayMultiplier}× only if you answer.</li>
+            <li>After hours, emergency and holiday change the trip and the hour only. Holiday only if you answer.</li>
             <li>Residential pays at completion. New commercial is due on completion, then Net 15.</li>
           </ul>
+          <p className="mt-3 rounded border border-[color:var(--accent)] p-2 text-sm">
+            <strong>{PROMO.title}:</strong> {PROMO.text}
+          </p>
           {CLOSED_WORK.map((closed) => (
             <p key={closed.work} className="mt-3 rounded border border-[color:var(--hazard)] bg-[color:var(--hazard-bg)] p-2 text-sm">
               <strong className="text-[color:var(--hazard)]">{closed.work} are closed</strong> until {closed.until}. {closed.stillOpen}

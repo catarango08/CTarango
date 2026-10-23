@@ -1,6 +1,6 @@
 import type { RecordValue } from '../schema';
 import { num, relationIds, round2 } from '../calc';
-import { TRAVEL_ZONES, type TravelZone } from './rules';
+import { ZONE_FALLBACK, type ZoneNumber } from './pricing';
 
 /**
  * How long will this take, and how long to get there.
@@ -25,30 +25,47 @@ export interface Forecast {
  * ------------------------------------------------------------------ */
 
 /**
- * Town → travel zone. Bolivar is the shop, and it sits in Polk County, so the
- * unincorporated parts of Polk are close in. Dallas and Webster are a county
- * over. Anything off the list is outside the footprint entirely.
+ * Town → trip zone, measured from Elkland, per the Rate Book's zone lists.
+ * Towns and counties not on those lists default to Zone 3 and are flagged
+ * "confirm zone" so nobody under-quotes a long drive.
  */
-const TOWN_ZONE: Record<string, TravelZone> = {
-  'Bolivar': 'A',
-  'Buffalo': 'A',
-  'Marshfield': 'A',
-  'Polk Co': 'A',
-  'Dallas Co': 'B',
-  'Webster Co': 'B',
-  'Other — STOP': 'C',
+const TOWN_ZONE: Record<string, ZoneNumber> = {
+  // Zone 1
+  'Elkland': 1,
+  'Fair Grove': 1,
+  'Marshfield': 1,
+  'Strafford': 1,
+  'Pleasant Hope': 1,
+  // Zone 2
+  'Buffalo': 2,
+  'Bolivar': 2,
+  'Niangua': 2,
+  'Long Lane': 2,
+  'Louisburg': 2,
+  'Seymour': 2,
+  'Rogersville': 2,
+  // Zone 3
+  'Urbana': 3,
+  'Walnut Grove': 3,
+  'Ash Grove': 3,
+  'Humansville': 3,
 };
 
 /** One-way minutes when there is no history to go on. */
-const ZONE_DEFAULT_MINUTES: Record<TravelZone, number> = { A: 15, B: 35, C: 55 };
+const ZONE_DEFAULT_MINUTES: Record<ZoneNumber, number> = { 1: 15, 2: 30, 3: 50 };
 
-export function zoneForTown(town: unknown): TravelZone {
-  return TOWN_ZONE[String(town ?? '').trim()] ?? 'C';
+export function zoneForTown(town: unknown): ZoneNumber {
+  return TOWN_ZONE[String(town ?? '').trim()] ?? 3;
 }
 
-export function travelFeeForTown(town: unknown): number {
-  const zone = zoneForTown(town);
-  return TRAVEL_ZONES.find((z) => z.zone === zone)?.fee ?? 0;
+/** True when the town is not on a Rate Book zone list, so Zone 3 is a guess. */
+export function zoneNeedsConfirm(town: unknown): boolean {
+  return !(String(town ?? '').trim() in TOWN_ZONE);
+}
+
+/** Full zone fee for a flat-rate visit to this town (fallback prices). */
+export function travelFeeForTown(town: unknown, zones: Record<ZoneNumber, number> = ZONE_FALLBACK): number {
+  return zones[zoneForTown(town)];
 }
 
 /**
@@ -68,7 +85,7 @@ export function forecastTravel(town: unknown, jobs: RecordValue[]): Forecast {
   if (history.length === 0) {
     return {
       minutes: fallback,
-      basis: `Zone ${zone} default — no drive time logged for ${name || 'this town'} yet`,
+      basis: `Zone ${zone} default${zoneNeedsConfirm(name) ? ' (confirm zone)' : ''}, no drive time logged for ${name || 'this town'} yet`,
       sample: 0,
       confidence: 'default',
     };
