@@ -122,7 +122,7 @@ export function buildDemoData(): Record<string, RecordValue[]> {
   const job = {
     hollisWell: id('jobs'), mcafeeKitchen: id('jobs'), reederDryer: id('jobs'),
     pinegroveAts: id('jobs'), hollisSurge: id('jobs'), dawsonNoGo: id('jobs'),
-    reederShop: id('jobs'), muleshoe: id('jobs'),
+    reederShop: id('jobs'), muleshoe: id('jobs'), cassidyLost: id('jobs'),
   };
 
   const jobs: RecordValue[] = [
@@ -156,7 +156,7 @@ export function buildDemoData(): Record<string, RecordValue[]> {
       workPerformed: 'Installed 60A fused disconnect within sight of the unit, new liquidtight whip, re-terminated at the dryer. Torqued to 275 in-lb and marked.',
       testResults: 'Phase A 241V, phase B 240V. Balanced at 1.2%. Megger 500V, >100 MΩ to ground.',
       recommendations: 'Shop panel is full. If he adds the second dryer he will need a sub-panel — worth quoting this winter.',
-      signedBy: 'Hal Reeder', paymentMethod: 'Net 15',
+      signedBy: 'Hal Reeder', paymentMethod: 'Net 15', quotedOn: day(-8), invoiceStatus: 'Sent', deposit: 0, payLink: '',
       signed: true, depositIn: false, paid: false, closeoutDone: false, reviewAsked: false, magnets: true, photos: true, hiddenDamage: false,
       customer: [{ id: cust.reeder }], hourEntries: [], hoursLogged: 6.5, play: 'Run closeout',
     },
@@ -171,7 +171,7 @@ export function buildDemoData(): Record<string, RecordValue[]> {
     {
       id: job.hollisSurge, name: 'Hollis — whole-home surge + panel label', jobNumber: 'TE-6', status: 'Quoted', type: 'Residential',
       source: 'Repeat', town: 'Dallas Co', permit: 'None', address: '1880 S Muleshoe Trail', phone: '417-555-0142',
-      window: 'Next week', callIn: day(-5), onSite: day(3), amount: 725, installHours: 0, driveHours: 0,
+      window: 'Next week', callIn: day(-5), onSite: day(3), quotedOn: day(-2), nextFollowUp: day(0), deposit: 0, amount: 725, installHours: 0, driveHours: 0,
       nextAction: 'Follow up tomorrow morning.', notes: 'Surge $500 plus panel schedule $225. Quoted off the card.',
       signed: false, depositIn: false, paid: false, closeoutDone: false, reviewAsked: false, magnets: false, photos: false, hiddenDamage: false,
       customer: [{ id: cust.hollis }], hourEntries: [], hoursLogged: 0, play: 'Follow up',
@@ -199,6 +199,14 @@ export function buildDemoData(): Record<string, RecordValue[]> {
       nextAction: 'Ask town. If green, book diagnostic $119.',
       signed: false, depositIn: false, paid: false, closeoutDone: false, reviewAsked: false, magnets: false, photos: false, hiddenDamage: false,
       customer: [{ id: cust.tarango }], hourEntries: [], hoursLogged: 0, play: 'Capture and qualify',
+    },
+    {
+      id: job.cassidyLost, name: 'McAfee — detached garage feed', jobNumber: 'TE-10', status: 'Lost', type: 'Residential',
+      source: 'HVAC referral', town: 'Bolivar', permit: 'None', address: '318 E Jackson St', phone: '417-555-0119',
+      callIn: day(-16), quotedOn: day(-13), amount: 1350, installHours: 0, driveHours: 0, lossReason: 'Timing',
+      nextAction: 'Check back in spring.', notes: 'Wants it after the slab is poured.',
+      signed: false, depositIn: false, paid: false, closeoutDone: false, reviewAsked: false, magnets: false, photos: false, hiddenDamage: false,
+      customer: [{ id: cust.mcafee }], hourEntries: [], hoursLogged: 0, play: 'Stop',
     },
   ];
 
@@ -316,12 +324,43 @@ export function buildDemoData(): Record<string, RecordValue[]> {
   }
 
   // Activity Log — the real seeded actuals from the first two days of tracking.
+  const davids = referrals.find((r) => r.name === "David's Heating & Cooling")!;
+  for (const j of jobs) if (j.source === 'HVAC referral') j.referredBy = [{ id: davids.id }];
+
+  const rb = (name: string, quantity = 1) => { const r = rateBook.find((x) => x.name === name)!; return { rateId: r.id, name, price: Number(r.price), quantity, kind: 'flat' as const }; };
+  const surgeDoc = (v: number) => ({
+    tier: 'residential', zone: 1, oldWork: false, scope: 'Whole-home surge protection at the main panel, and a typed panel schedule so every breaker is labeled.',
+    options: [
+      { id: 'good', label: 'Good', summary: 'Surge protector at the panel.', lines: [rb('Whole-home surge')], trip: 'none', extraHours: 0, materialsCost: 0 },
+      { id: 'better', label: 'Better', summary: 'Surge protector plus a labeled panel.', recommended: true, lines: [rb('Whole-home surge'), rb('Panel schedule / circuit ID')], trip: 'none', extraHours: 0, materialsCost: 0 },
+      { id: 'best', label: 'Best', summary: 'Better, plus AFCI/GFCI protection on the kitchen circuit.', lines: [rb('Whole-home surge'), rb('Panel schedule / circuit ID'), rb('AFCI/GFCI breaker')], trip: 'none', extraHours: 0, materialsCost: 0 },
+    ],
+    addOns: [
+      { id: 'smoke', ...rb('Smoke/CO existing'), recommended: true },
+      { id: 'gfci', ...rb('GFCI receptacle') },
+    ],
+    discount: v === 2 ? { label: 'Repeat customer', amount: 50 } : null,
+  });
+  const dryerDoc = {
+    tier: 'residential', zone: 2, oldWork: false, scope: 'Fused disconnect within sight of the grain dryer, with a new liquidtight whip.',
+    options: [{ id: 'good', label: 'Disconnect + whip', summary: '', recommended: true, lines: [rb('HVAC disconnect + whip'), rb('240V appliance circuit')], trip: 'none', extraHours: 1, materialsCost: 183 }],
+    addOns: [{ id: 'gfci', ...rb('GFCI receptacle') }],
+    discount: null,
+  };
+  const quotes: RecordValue[] = [
+    { id: id('quotes'), name: 'TE-6 v1', job: [{ id: job.hollisSurge }], version: 1, status: 'Superseded', data: JSON.stringify(surgeDoc(1)), total: 725, deposit: 0, createdTime: at(-3, 16, 5) },
+    { id: id('quotes'), name: 'TE-6 v2', job: [{ id: job.hollisSurge }], version: 2, status: 'Sent', data: JSON.stringify(surgeDoc(2)), total: 860, deposit: 0, createdTime: at(-2, 9, 40) },
+    { id: id('quotes'), name: 'TE-5 v1', job: [{ id: job.reederDryer }], version: 1, status: 'Accepted', acceptedOption: 'good', data: JSON.stringify({ doc: dryerDoc, accepted: { optionId: 'good', addOns: [] } }), total: 1285, deposit: 0, signedBy: 'Hal Reeder', signedAt: day(-8), createdTime: at(-8, 11, 0) },
+  ];
+  for (const j of jobs) j.quotes = quotes.filter((q) => (q.job as { id: string }[])[0].id === j.id).map((q) => ({ id: q.id }));
+
   const activityLog: RecordValue[] = [
     { id: id('activityLog'), name: 'Outreach emails (12)', date: '2026-10-20', type: 'Email', count: 12, contact: '', outcome: 'Sent', notes: 'Day one of tracking.' },
     { id: id('activityLog'), name: 'Outreach emails delivered (3)', date: '2026-10-21', type: 'Email', count: 3, contact: '', outcome: 'Delivered', notes: '' },
     { id: id('activityLog'), name: 'Outreach emails spam-blocked (4)', date: '2026-10-21', type: 'Email', count: 4, contact: '', outcome: 'Spam-blocked', notes: 'Sent but blocked by spam filters.' },
     { id: id('activityLog'), name: 'Calls (2)', date: '2026-10-21', type: 'Call', count: 2, contact: '', outcome: '', notes: '' },
     { id: id('activityLog'), name: 'Job walk', date: '2026-10-21', type: 'Visit', count: 1, contact: '', outcome: 'Job walk', notes: '' },
+    { id: id('activityLog'), name: 'Follow-up call — Hollis surge quote', date: day(-1), type: 'Call', count: 1, contact: 'Hollis', outcome: 'Left voicemail', notes: 'Day 1 after the quote.', job: [{ id: job.hollisSurge }] },
   ];
 
   const dailyDigest: RecordValue[] = [
@@ -338,5 +377,5 @@ export function buildDemoData(): Record<string, RecordValue[]> {
     },
   ];
 
-  return { jobs, jobPhotos, customers, hourLedger, rateBook, territory, permits, referrals, equipment, truckInventory, jobMaterials, activityLog, dailyDigest };
+  return { jobs, jobPhotos, customers, hourLedger, rateBook, territory, permits, referrals, equipment, truckInventory, jobMaterials, activityLog, dailyDigest, quotes };
 }
