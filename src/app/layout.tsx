@@ -1,8 +1,13 @@
 import type { Metadata, Viewport } from 'next';
+import { Anton, Barlow, Barlow_Condensed } from 'next/font/google';
 import './globals.css';
 import { AppFrame } from '@/components/app-frame';
 import { ThemeScript } from '@/components/theme-toggle';
 import { getStore } from '@/lib/store';
+
+const anton = Anton({ subsets: ['latin'], weight: '400', variable: '--font-anton', display: 'swap' });
+const barlow = Barlow({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-barlow', display: 'swap' });
+const barlowCondensed = Barlow_Condensed({ subsets: ['latin'], weight: ['600', '700', '800'], variable: '--font-barlow-condensed', display: 'swap' });
 
 export const metadata: Metadata = {
   title: 'Tarango Electric — field desk',
@@ -30,15 +35,15 @@ export const viewport: Viewport = {
   // Lets the layout run under the notch; the CSS pads it back with safe-area insets.
   viewportFit: 'cover',
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#F5F1E8' },
-    { media: '(prefers-color-scheme: dark)', color: '#222426' },
+    { media: '(prefers-color-scheme: light)', color: '#FFFFFF' },
+    { media: '(prefers-color-scheme: dark)', color: '#0C0C0C' },
   ],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const storeKind = getStore().kind;
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={`${anton.variable} ${barlow.variable} ${barlowCondensed.variable}`}>
       <head>
         <ThemeScript />
       </head>

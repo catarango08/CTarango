@@ -1,15 +1,15 @@
 import type { Config } from 'tailwindcss';
 
 /**
- * Tarango Electric color lock (brand/colors.txt):
- *   Charcoal     #222426  truck, type
- *   Aged White   #F5F1E8  paper, magnet
- *   Harvest Gold #B8871F  rules, accent type
- *   Oxide Red    #8E382F  tagline / hazard ONLY
+ * Tarango Electric brand package v1.0 (Oct 2026), public/brand/colors.txt:
+ *   Tarango Red  #E01E25   accent, bolt
+ *   Panel Black  #0C0C0C   type, dark fields
+ *   White        #FFFFFF
+ *   Conduit Gray #555555 / Light Gray #F4F4F4 support
  *
- * The four locked values are the source of truth. The numbered ramps exist
- * only to give dark surfaces enough contrast; each scale passes through its
- * locked value so brand-correct usage is always available.
+ * The old utility names (charcoal, paper, gold, oxide) are kept so existing
+ * classes repaint without churn: charcoal = Panel Black, paper = white/light
+ * gray, gold and oxide = Tarango Red.
  */
 const config: Config = {
   darkMode: ['class', '[data-theme="night"]'],
@@ -18,44 +18,44 @@ const config: Config = {
     extend: {
       colors: {
         charcoal: {
-          DEFAULT: '#222426',
-          900: '#17191A',
-          800: '#1D1F21',
-          700: '#222426',
-          600: '#2B2E30',
-          500: '#3A3E41',
-          400: '#565B5F',
-          300: '#7C8287',
+          DEFAULT: '#0C0C0C',
+          900: '#050505',
+          800: '#0C0C0C',
+          700: '#161616',
+          600: '#222222',
+          500: '#333333',
+          400: '#555555',
+          300: '#7A7A7A',
         },
         paper: {
-          DEFAULT: '#F5F1E8',
-          50: '#FBF9F4',
-          100: '#F5F1E8',
-          200: '#EDE7DA',
-          300: '#DED6C4',
-          400: '#C4BAA3',
+          DEFAULT: '#FFFFFF',
+          50: '#FFFFFF',
+          100: '#F4F4F4',
+          200: '#EBEBEB',
+          300: '#DDDDDD',
+          400: '#BBBBBB',
         },
         gold: {
-          DEFAULT: '#B8871F',
-          300: '#E3BC6B',
-          400: '#D9A441',
-          500: '#B8871F',
-          600: '#986E16',
-          700: '#7A570F',
+          DEFAULT: '#E01E25',
+          300: '#FF8A8D',
+          400: '#FF5A5F',
+          500: '#E01E25',
+          600: '#B5161C',
+          700: '#8A1015',
         },
         oxide: {
-          DEFAULT: '#8E382F',
-          300: '#D98A7C',
-          400: '#C9614F',
-          500: '#8E382F',
-          600: '#732C25',
+          DEFAULT: '#E01E25',
+          300: '#FF8A8D',
+          400: '#FF5A5F',
+          500: '#E01E25',
+          600: '#B5161C',
         },
       },
       fontFamily: {
-        // Impact is the wordmark face; the stack falls back the way the SVGs do.
-        display: ['Impact', 'Haettenschweiler', 'Arial Narrow Bold', 'Arial Narrow', 'sans-serif'],
-        serif: ['Georgia', 'Times New Roman', 'serif'],
-        sans: ['ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        // Anton: logo, headlines, phone. Barlow Condensed: labels. Barlow: body.
+        display: ['var(--font-anton)', 'Impact', 'Arial Narrow', 'sans-serif'],
+        serif: ['var(--font-barlow-condensed)', 'Arial Narrow', 'sans-serif'],
+        sans: ['var(--font-barlow)', 'ui-sans-serif', 'system-ui', 'Helvetica Neue', 'Arial', 'sans-serif'],
         mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
       },
     },
