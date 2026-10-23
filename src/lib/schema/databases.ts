@@ -1,6 +1,7 @@
 import type { DbDef } from './types';
 import { activityLog } from './activity-log';
 import { dailyDigest } from './daily-digest';
+import { quotes } from './quotes';
 
 /**
  * The Tarango Electric OS, as it actually exists in Notion.
@@ -36,6 +37,12 @@ export const JOB_STATUSES = [
   'No-go',
   'Lost',
 ] as const;
+
+/** Jobs → Loss Reason. */
+export const LOSS_REASONS = ['Price', 'Timing', 'Went with other', 'No response', 'Out of area', 'Other'] as const;
+
+/** Jobs → Invoice Status. */
+export const INVOICE_STATUSES = ['Draft', 'Sent', 'Partial', 'Paid'] as const;
 
 /** Statuses that mean the ticket is finished, one way or another. */
 export const TERMINAL_STATUSES = ['Closed', 'Declined', 'No-go', 'Lost'] as const;
@@ -129,7 +136,16 @@ const jobs: DbDef = {
     { key: 'depositIn', label: 'Deposit in', type: 'checkbox', help: 'Required at 50% over $1,500.' },
     { key: 'paid', label: 'Paid', type: 'checkbox' },
     { key: 'closeoutDone', label: 'Closeout done', type: 'checkbox' },
-    { key: 'reviewAsked', label: 'Review asked', type: 'checkbox', help: 'On your phone, before you leave.' },
+    { key: 'reviewAsked', label: 'Review asked', type: 'checkbox', help: 'Review requested. On your phone, before you leave.' },
+    { key: 'quotedOn', label: 'Quoted On', type: 'date', help: 'Set when the job moves to Quoted. Starts the +2/+5/+10 follow-ups.' },
+    { key: 'nextFollowUp', label: 'Next Follow-Up', type: 'date', help: 'The next call on this quote. Nothing auto-sends.' },
+    { key: 'lossReason', label: 'Loss Reason', type: 'select', options: LOSS_REASONS, help: 'Required to move a job to Lost.' },
+    { key: 'deposit', label: 'Deposit', type: 'money', help: 'Deposit collected, applied on the invoice.' },
+    { key: 'invoiceStatus', label: 'Invoice Status', type: 'select', options: INVOICE_STATUSES },
+    { key: 'payLink', label: 'Pay Link', type: 'url', help: 'Paste the Stripe payment link for this invoice. Shows as "Pay with card".' },
+    { key: 'signature', label: 'Signature', type: 'files', help: 'Customer signature captured on the quote.' },
+    { key: 'referredBy', label: 'Referred By', type: 'relation', relation: 'referrals', dualLabel: 'Referred jobs' },
+    { key: 'quotes', label: 'Quotes', type: 'relation', relation: 'quotes', dualLabel: 'Job' },
     { key: 'magnets', label: 'Magnets', type: 'checkbox', help: 'Two magnets left.' },
     { key: 'photos', label: 'Photos', type: 'checkbox', help: 'Cover off / cover on before you leave.' },
     { key: 'hiddenDamage', label: 'Hidden damage', type: 'checkbox', help: 'Logged if anything extra was found.' },
@@ -369,5 +385,5 @@ const jobMaterials: DbDef = {
 
 export const DATABASES = [
   jobs, jobPhotos, customers, hourLedger, rateBook, territory, permits, referrals, equipment,
-  truckInventory, jobMaterials, activityLog, dailyDigest,
+  truckInventory, jobMaterials, activityLog, dailyDigest, quotes,
 ] as const;

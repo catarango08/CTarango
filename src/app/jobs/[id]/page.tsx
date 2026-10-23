@@ -16,6 +16,9 @@ import { materialTotals } from '@/lib/domain/materials';
 import { date, dateTime, money, number, time } from '@/lib/format';
 import { num, relationIds } from '@/lib/calc';
 import { loadPricing } from '@/lib/pricing';
+import { ReviewPrompt } from '@/components/review-prompt';
+import { CLOSE } from '@/config/close';
+import { firstName } from '@/lib/domain/pipeline';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,10 +64,24 @@ export default async function JobTicketPage({ params }: { params: Promise<{ id: 
           <>
             <StatusPill value={job.status} />
             <Link href={`/jobs/${id}/onsite`} className="btn">On-site intake</Link>
+            <Link href={`/jobs/${id}/quote`} className="btn">Quote</Link>
+            <Link href={`/jobs/${id}/invoice`} className="btn">Invoice</Link>
             <Link href="/jobs" className="btn">Board</Link>
           </>
         }
       />
+
+      {['Invoiced', 'Closed'].includes(String(job.status)) && (
+        <div id="review" className="mb-4">
+          <ReviewPrompt
+            jobId={id}
+            phone={tel}
+            text={CLOSE.reviewText.replace('{first}', firstName(customer?.name) || 'there').replace('{link}', CLOSE.googleReviewUrl || CLOSE.googleReviewPlaceholder)}
+            linkMissing={!CLOSE.googleReviewUrl}
+            done={job.reviewAsked === true}
+          />
+        </div>
+      )}
 
       {/* 1 — Who and where. First thing on the screen, because it is the first
           thing you need whether the phone is ringing or you are in the drive. */}

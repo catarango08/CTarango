@@ -144,4 +144,6 @@ body {
 @media print {
   body { background: #fff; color: #0C0C0C; }
   .no-print { display: none !important; }
+  aside, header.mobile-bar { display: none !important; }
+  .invoice { box-shadow: none !important; max-width: none; }
 }

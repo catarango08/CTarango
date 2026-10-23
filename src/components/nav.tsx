@@ -15,6 +15,7 @@ const SECTIONS: { heading: string; items: { href: string; label: string }[] }[] 
       { href: '/dashboard', label: 'Goals' },
       { href: '/new-call', label: 'New call' },
       { href: '/jobs', label: 'Jobs' },
+      { href: '/pipeline', label: 'Pipeline' },
       { href: '/photos', label: 'Photos' },
     ],
   },

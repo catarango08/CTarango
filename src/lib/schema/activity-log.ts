@@ -25,5 +25,6 @@ export const activityLog: DbDef = {
     { key: 'contact', label: 'Contact', type: 'text', column: true },
     { key: 'outcome', label: 'Outcome', type: 'text', column: true },
     { key: 'notes', label: 'Notes', type: 'longtext' },
+    { key: 'job', label: 'Job', type: 'relation', relation: 'jobs', dualLabel: 'Activity' },
   ],
 };
