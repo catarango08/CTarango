@@ -1,3 +1,4 @@
+import { isChangeOrder } from '@/lib/domain/change-order';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { findById, loadAll } from '@/lib/data';
@@ -14,7 +15,7 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
   const job = await findById('jobs', id);
   if (!job) notFound();
   const [allQuotes, rates, pricing] = await Promise.all([loadAll('quotes'), loadAll('rateBook'), loadPricing()]);
-  const quotes = allQuotes.filter((q) => relationIds(q.job).includes(id)).sort((a, b) => Number(b.version) - Number(a.version));
+  const quotes = allQuotes.filter((q) => relationIds(q.job).includes(id) && !isChangeOrder(q)).sort((a, b) => Number(b.version) - Number(a.version));
   const latest = quotes[0] ? parseStored(quotes[0].data) : null;
   const commercial = /commercial|standby|farm/i.test(String(job.type ?? ''));
   const base = emptyDoc(commercial ? 'commercial' : 'residential');

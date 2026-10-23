@@ -1,3 +1,4 @@
+import { isChangeOrder } from '@/lib/domain/change-order';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { findById, loadAll, relatedTo } from '@/lib/data';
@@ -73,7 +74,8 @@ export default async function OnsitePage({ params }: { params: Promise<{ id: str
   const phone = String(job.phone ?? customer?.phone ?? '');
   const address = String(job.address ?? customer?.address ?? '');
   const totals = materialTotals(materials);
-  const latest = [...quotes].sort((a, b) => num(b.version) - num(a.version))[0];
+  const changeOrders = quotes.filter(isChangeOrder);
+  const latest = quotes.filter((q) => !isChangeOrder(q)).sort((a, b) => num(b.version) - num(a.version))[0];
   const step = primaryStep(job, quotes.length > 0);
   const when = job.scheduledAt ? dateTime(new Date(String(job.scheduledAt))) : String(job.window ?? '');
   const reviewLink = CLOSE.googleReviewUrl || CLOSE.googleReviewPlaceholder;
@@ -119,7 +121,7 @@ export default async function OnsitePage({ params }: { params: Promise<{ id: str
       </Card>
 
       <Card title={`Photos${missing.length ? ` — still need ${missing.join(', ')}` : ''}`}><div id="photos" className="scroll-mt-20" />
-        <QuickPhoto jobId={id} stages={[...new Set([...ARRIVAL_PHOTO_STAGES, ...PHOTO_STAGES])].slice(0, 8)} counts={counts} />
+        <QuickPhoto jobId={id} stages={[...new Set([...REQUIRED_PHOTO_STAGES, ...ARRIVAL_PHOTO_STAGES, ...PHOTO_STAGES])].slice(0, 8)} counts={counts} />
         {photos.length > 0 && <div className="mt-3"><PhotoStrip photos={photos} /></div>}
       </Card>
 
@@ -140,6 +142,7 @@ export default async function OnsitePage({ params }: { params: Promise<{ id: str
           <Link href={`/jobs/${id}/quote`} className="btn-primary min-h-14 text-base">{latest ? 'Open quote' : 'Build quote'}</Link>
           {latest ? <Link href={`/jobs/${id}/quote/${latest.id}`} className="btn min-h-14 justify-center text-base">Customer view</Link> : <span />}
         </div>
+        <Link href={`/jobs/${id}/change-order`} className="btn mt-2 min-h-14 w-full justify-center text-base">+ Change order{changeOrders.length ? ` (${changeOrders.length} so far)` : ''}</Link>
       </Card>
 
       <Card title="Done · invoice · review"><div id="invoice" className="scroll-mt-20" />

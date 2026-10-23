@@ -6,7 +6,7 @@ import { priceOption, type QuoteDoc } from '@/lib/domain/options';
 import type { Pricing } from '@/lib/domain/pricing';
 import { patchRecord } from '@/lib/client/sync';
 
-const money = (n: number) => `${n < 0 ? '−' : ''}$${Math.abs(n).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+const money = (n: number) => `${n < 0 ? '−' : ''}$${Math.abs(n).toLocaleString(undefined, { minimumFractionDigits: Number.isInteger(Math.round(Math.abs(n) * 100) / 100) ? 0 : 2, maximumFractionDigits: 2 })}`;
 const REASONS = ['Price', 'Spouse', 'Timing', 'Other quotes', 'Other'];
 
 interface Props {
@@ -97,7 +97,7 @@ export function CustomerQuote(p: Props) {
       {step === 2 && (
         <section className="mt-3 space-y-3">
           <h1 className="text-2xl font-bold">Pick one</h1>
-          {p.doc.options.map((o) => {
+          {p.doc.options.filter((o, i, arr) => i === 0 || priceOption(p.doc, o, p.pricing, addOns).total !== priceOption(p.doc, arr[i - 1], p.pricing, addOns).total).map((o) => {
             const t = priceOption(p.doc, o, p.pricing, addOns).total;
             const sel = o.id === option.id;
             const checks = (o.items ?? []).filter((i) => i.qty > 0).map((i) => `${i.name}${i.qty > 1 ? ` × ${i.qty}` : ''}`).concat(o.lines.map((l) => l.name));

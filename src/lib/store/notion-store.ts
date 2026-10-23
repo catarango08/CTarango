@@ -6,7 +6,39 @@ import { decodePage, encodeProperties } from '../notion/mapper';
 import { databaseId } from '../notion/registry';
 import type { Condition, Query, Store, UploadInput } from './types';
 
+/**
+ * Properties the app knows about but this Notion database doesn't have yet
+ * (bootstrap not run). Writes skip them instead of failing; the UI shows a quiet notice.
+ */
+const gapsG = globalThis as unknown as { __teSchemaGaps?: Map<string, Set<string>> };
+export const schemaGaps: Map<string, Set<string>> = (gapsG.__teSchemaGaps ??= new Map());
+
 export class NotionStore implements Store {
+  private readonly props = new Map<string, { at: number; names: Set<string> }>();
+
+  /** Drop properties the live database doesn't have. Never throws: unknown schema = send everything. */
+  private async present(dbKey: DbKey, encoded: Record<string, unknown>): Promise<Record<string, unknown>> {
+    let cached = this.props.get(dbKey);
+    if (!cached || Date.now() - cached.at > 10 * 60_000) {
+      try {
+        const db = await this.client.retrieveDatabase(databaseId(dbKey));
+        cached = { at: Date.now(), names: new Set(Object.keys(db.properties ?? {})) };
+        this.props.set(dbKey, cached);
+      } catch {
+        return encoded;
+      }
+    }
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(encoded)) {
+      if (cached.names.has(k)) out[k] = v;
+      else {
+        if (!schemaGaps.has(dbKey)) schemaGaps.set(dbKey, new Set());
+        schemaGaps.get(dbKey)!.add(k);
+      }
+    }
+    return out;
+  }
+
   readonly kind = 'notion' as const;
   private readonly client: NotionClient;
 
@@ -29,7 +61,18 @@ export class NotionStore implements Store {
       .filter(Boolean);
     if (sorts.length) body.sorts = sorts;
 
-    const pages = await this.client.queryAll(databaseId(dbKey), body, query.limit ?? 2000);
+    let pages;
+    try {
+      pages = await this.client.queryAll(databaseId(dbKey), body, query.limit ?? 2000);
+    } catch (err) {
+      // A filter/sort on a property bootstrap hasn't added yet: list everything and filter in memory.
+      if (!body.filter && !body.sorts) throw err;
+      pages = await this.client.queryAll(databaseId(dbKey), {}, 2000);
+      const all = pages.map((p) => decodePage(db, p as NotionPage));
+      const conds = query.where ?? [];
+      const kept = all.filter((r) => conds.every((c) => matchLocal(r, c)));
+      return query.limit ? kept.slice(0, query.limit) : kept;
+    }
     const records = pages.map((p) => decodePage(db, p));
     return query.limit ? records.slice(0, query.limit) : records;
   }
@@ -50,14 +93,14 @@ export class NotionStore implements Store {
     const page = await this.client.createPage({
       parent: { database_id: databaseId(dbKey) },
       icon: { type: 'emoji', emoji: db.emoji },
-      properties: encodeProperties(db, values),
+      properties: await this.present(dbKey, encodeProperties(db, values)),
     });
     return decodePage(db, page);
   }
 
   async update(dbKey: DbKey, id: string, values: Record<string, unknown>): Promise<RecordValue> {
     const db = getDb(dbKey);
-    const page = await this.client.updatePage(id, { properties: encodeProperties(db, values) });
+    const page = await this.client.updatePage(id, { properties: await this.present(dbKey, encodeProperties(db, values)) });
     return decodePage(db, page);
   }
 
@@ -238,4 +281,20 @@ function relationId(value: unknown): string {
 
 function isNotFound(err: unknown): boolean {
   return Boolean(err && typeof err === 'object' && 'status' in err && (err as { status: number }).status === 404);
+}
+
+function matchLocal(r: RecordValue, c: Condition): boolean {
+  const raw = r[c.key] as unknown;
+  const vals = Array.isArray(raw) ? raw.map((x) => (typeof x === 'object' && x ? (x as { id?: string }).id : x)) : [raw];
+  const str = (x: unknown) => String(x ?? '');
+  const cmp = (x: unknown) => (typeof x === 'number' && typeof c.value === 'number' ? x - c.value : str(x).localeCompare(str(c.value)));
+  switch (c.op) {
+    case 'equals': return vals.some((x) => str(x) === str(c.value));
+    case 'not_equals': return !vals.some((x) => str(x) === str(c.value));
+    case 'contains': return vals.some((x) => str(x).toLowerCase().includes(str(c.value).toLowerCase()));
+    case 'in': return Array.isArray(c.value) && vals.some((x) => (c.value as unknown[]).map(str).includes(str(x)));
+    case 'gte': return vals.some((x) => x != null && cmp(x) >= 0);
+    case 'lte': return vals.some((x) => x != null && cmp(x) <= 0);
+    default: return true;
+  }
 }

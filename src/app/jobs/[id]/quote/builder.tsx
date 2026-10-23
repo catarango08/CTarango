@@ -58,12 +58,20 @@ export function QuoteBuilder({ jobId, initial, pricing, customer, diagnostic, fo
   const step = (k: number, d: number) => setOpt({ items: items.map((x, n) => (n === k ? { ...x, qty: Math.max(0, x.qty + d) } : x)).filter((x) => x.qty > 0) });
 
   function makeTiers() {
-    const base = (opt.items ?? []).map((x) => ({ ...x }));
-    const better = [...base, ...ASSEMBLIES.filter((a) => a.betterAdd && !base.some((b) => b.id === a.id)).map((a) => fromAsm(a))];
+    const ups = ASSEMBLIES.filter((a) => a.betterAdd).map((a) => a.id);
+    const all = (opt.items ?? []).map((x) => ({ ...x }));
+    const stripped = all.filter((x) => !ups.includes(x.id));
+    const good = stripped.length ? stripped : all;
+    const better = [...good, ...ASSEMBLIES.filter((a) => a.betterAdd && !good.some((b) => b.id === a.id)).map((a) => fromAsm(a))];
     const best = [...better, ...(better.some((b) => b.id === 'afci') ? [] : [fromAsm(ASSEMBLIES.find((a) => a.id === 'afci')!)])];
     const mk = (id: string, label: string, its: EstItem[], benefit: string, recommended = false): QuoteOptionDef => ({ id, label, summary: '', benefit, recommended, lines: [], trip: 'none', extraHours: 0, materialsCost: 0, items: its });
-    setDoc({ ...doc, options: [mk('good', 'Good', base, 'Fixes the problem.'), mk('better', 'Better', better, 'Fixes it and protects the house.', true), mk('best', 'Best', best, 'Everything, done once.')] });
-    setActive(1);
+    const same = (x: EstItem[], y: EstItem[]) => x.length === y.length && x.every((i) => y.some((j) => j.id === i.id && j.qty === i.qty));
+    const tiers = [mk('good', 'Good', good, 'Fixes the problem.')];
+    if (!same(better, good)) tiers.push(mk('better', 'Better', better, 'Fixes it and protects the house.', true));
+    if (!same(best, better)) tiers.push(mk('best', 'Best', best, 'Everything, done once.', tiers.length === 1));
+    setDoc({ ...doc, options: tiers });
+    setActive(Math.min(1, tiers.length - 1));
+    if (tiers.length < 3) setMsg('Better added nothing beyond Good, so it was left out. Add an upgrade to make three tiers.');
   }
   function addScenario(id: string) {
     const s = SCENARIOS.find((x) => x.id === id)!;
@@ -129,6 +137,7 @@ export function QuoteBuilder({ jobId, initial, pricing, customer, diagnostic, fo
         </div>
         <div className="mt-2 grid grid-cols-2 gap-2">
           <button type="button" className="btn-primary min-h-12" onClick={makeTiers}>Make tiers</button>
+          {priced.some((x, i) => i > 0 && x.total === priced[i - 1].total) && <p className="basis-full rounded bg-amber-100 p-2 text-sm font-semibold text-amber-900">Two options cost the same — the customer only sees one. Add an upgrade to the higher tier.</p>}
           <button type="button" className="btn min-h-12 justify-center" onClick={() => setShowScen((v) => !v)}>If we find…</button>
         </div>
         {showScen && (

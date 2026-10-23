@@ -31,7 +31,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
     }
     if (body.action === 'done') {
       const start = String(job.startedAt ?? job.arrived ?? '');
-      const hours = start ? Math.max(0, Math.round(((Date.parse(at) - Date.parse(start)) / 3600000) * 4) / 4) : 0;
+      const hours = start ? Math.max(0.25, Math.round(((Date.parse(at) - Date.parse(start)) / 3600000) * 4) / 4) : 0;
       const prior = Number(job.installHours ?? 0) || 0;
       const updated = await store.update('jobs', id, { doneAt: at, departed: at, installHours: prior + hours });
       if (hours > 0) {
