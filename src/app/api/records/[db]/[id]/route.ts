@@ -3,6 +3,7 @@ import { getStore } from '@/lib/store';
 import { tryGetDb, type DbKey } from '@/lib/schema';
 import { validateRecord } from '@/lib/schema/validate';
 import { findById } from '@/lib/data';
+import { statusSideEffects } from '@/lib/domain/pipeline';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,8 +30,15 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ db: strin
   const result = validateRecord(def, body, { partial: true });
   if (!result.ok) return NextResponse.json({ error: 'Validation failed', issues: result.errors }, { status: 422 });
 
+  let values = result.values ?? {};
+  if (db === 'jobs' && values.status !== undefined) {
+    const effects = statusSideEffects(await getStore().get('jobs', id), values);
+    if (!effects.ok) return NextResponse.json({ error: effects.error }, { status: 422 });
+    values = { ...values, ...effects.extra };
+  }
+
   try {
-    const record = await getStore().update(db as DbKey, id, result.values ?? {});
+    const record = await getStore().update(db as DbKey, id, values);
     return NextResponse.json({ record });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Update failed' }, { status: 502 });

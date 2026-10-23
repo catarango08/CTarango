@@ -3,6 +3,7 @@ import type { DbKey, RecordValue } from '../schema';
 import { REQUIRED_PHOTO_STAGES } from '../schema';
 import { num, relationIds, round2 } from '../calc';
 import { closeoutStatus } from './gates';
+import { statusSideEffects } from './pipeline';
 
 /**
  * Rules applied on write, wherever the write comes from — the UI, the REST
@@ -116,7 +117,9 @@ export async function advanceStatus(
     return { ok: true, job: updated };
   }
 
-  return { ok: true, job: await store.update('jobs', jobId, { status: nextStatus }) };
+  const effects = statusSideEffects(job, { status: nextStatus });
+  if (!effects.ok) return { ok: false, blocking: [effects.error] };
+  return { ok: true, job: await store.update('jobs', jobId, { status: nextStatus, ...effects.extra }) };
 }
 
 function today(): string {
