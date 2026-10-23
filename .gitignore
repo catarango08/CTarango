@@ -10,3 +10,4 @@ next-env.d.ts
 .DS_Store
 .notion-ids.json
 uploads/
+.geocode-cache.json
