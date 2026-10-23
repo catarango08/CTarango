@@ -3,8 +3,10 @@ import { num } from '../calc';
 
 /**
  * Territory geometry for the /map page and the Goals dashboard's trips-by-zone
- * numbers. Everything is measured straight-line from the shop at Elkland. The
- * Rate Book quotes one-way road miles, so treat a point near a ring as a call.
+ * numbers. Zones are by DRIVE miles from Elkland. Named towns use the
+ * drive-mile zone list below (TOWN_ZONE, same as the field desk's forecast).
+ * The rings are straight-line, so for a raw address treat a point near a ring
+ * as a call. County options are zoned by address.
  *
  * Internal only: addresses and coordinates never leave the passcode screens.
  */
@@ -16,9 +18,28 @@ export const HOME: LatLng & { name: string } = { name: 'Elkland', lat: 37.4456, 
 /** Fallback when the Rate Book has no "Travel Zone N" rows (demo data). */
 export const DEFAULT_ZONES = [
   { zone: 1, maxMiles: 16, fee: 70, note: 'Elkland, Fair Grove, Marshfield, Strafford, Pleasant Hope' },
-  { zone: 2, maxMiles: 32, fee: 115, note: 'Buffalo, Bolivar, Niangua, Long Lane, Louisburg, Seymour, Rogersville' },
-  { zone: 3, maxMiles: 50, fee: 155, note: 'Urbana, Walnut Grove, Ash Grove, Humansville, county edges' },
+  { zone: 2, maxMiles: 32, fee: 115, note: 'Buffalo, Bolivar, Niangua, Long Lane, Louisburg, Seymour, Rogersville, Brighton, Morrisville, Halfway, Fordland' },
+  { zone: 3, maxMiles: 50, fee: 155, note: 'Urbana, Walnut Grove, Ash Grove, Humansville, Bennett Springs (Dallas Co), county edges' },
 ];
+
+/** Town → zone by drive miles from Elkland. Matches the Rate Book and Notion's Town options. */
+export const TOWN_ZONE: Record<string, 1 | 2 | 3> = {
+  Elkland: 1, 'Fair Grove': 1, Marshfield: 1, Strafford: 1, 'Pleasant Hope': 1,
+  Buffalo: 2, Bolivar: 2, Niangua: 2, 'Long Lane': 2, Louisburg: 2, Seymour: 2, Rogersville: 2,
+  Brighton: 2, Morrisville: 2, Halfway: 2, Fordland: 2,
+  Urbana: 3, 'Walnut Grove': 3, 'Ash Grove': 3, Humansville: 3, 'Bennett Springs (Dallas Co)': 3,
+};
+
+/** County options: Zone 3 by default, the address decides. */
+export const COUNTY_OPTIONS = ['Dallas Co', 'Polk Co', 'Webster Co', 'Greene Co'];
+
+/** Zone for a Jobs.Town value, from the drive-mile list. Counties default to Zone 3, "zone by address". */
+export function zoneForTown(town: unknown, zones: TripZone[] = DEFAULT_ZONES): { zone: TripZone | null; flag?: 'zone by address' } {
+  const t = String(town ?? '').trim();
+  if (COUNTY_OPTIONS.includes(t)) return { zone: zones.find((z) => z.zone === 3) ?? null, flag: 'zone by address' };
+  const n = TOWN_ZONE[t];
+  return { zone: n ? zones.find((z) => z.zone === n) ?? null : null };
+}
 
 export type TripZone = (typeof DEFAULT_ZONES)[number];
 
@@ -59,23 +80,20 @@ export const PLACES: Record<string, LatLng> = {
   Niangua: { lat: 37.3881, lng: -92.8327 },
   Louisburg: { lat: 37.757, lng: -93.1366 },
   Seymour: { lat: 37.1467, lng: -92.7688 },
-  Conway: { lat: 37.5017, lng: -92.8213 },
   Halfway: { lat: 37.4878, lng: -93.2477 },
   Brighton: { lat: 37.4786, lng: -93.361 },
   Morrisville: { lat: 37.4787, lng: -93.4291 },
-  Phillipsburg: { lat: 37.5559, lng: -92.7818 },
   Fordland: { lat: 37.1578, lng: -92.9399 },
   Rogersville: { lat: 37.117, lng: -93.0558 },
   Urbana: { lat: 37.8456, lng: -93.1655 },
   'Walnut Grove': { lat: 37.4114, lng: -93.5466 },
   'Ash Grove': { lat: 37.3153, lng: -93.5852 },
   Humansville: { lat: 37.7945, lng: -93.578 },
+  'Bennett Springs (Dallas Co)': { lat: 37.7159, lng: -92.8593 },
   'Dallas Co': { lat: 37.68, lng: -93.02 },
   'Polk Co': { lat: 37.62, lng: -93.4 },
   'Webster Co': { lat: 37.28, lng: -92.88 },
   'Greene Co': { lat: 37.26, lng: -93.34 },
-  'Laclede Co': { lat: 37.66, lng: -92.59 },
-  'Christian Co': { lat: 36.97, lng: -93.19 },
 };
 
 export function placeFor(town: unknown): LatLng | null {
@@ -102,7 +120,7 @@ export function nearestTown(point: LatLng): { name: string; miles: number } {
  * pick a permit office; it is not a boundary test.
  */
 export function countyFor(point: LatLng): string {
-  const counties = ['Dallas Co', 'Polk Co', 'Webster Co', 'Greene Co', 'Laclede Co', 'Christian Co'];
+  const counties = COUNTY_OPTIONS;
   return counties.reduce((best, c) => (milesBetween(point, PLACES[c]) < milesBetween(point, PLACES[best]) ? c : best), counties[0]);
 }
 

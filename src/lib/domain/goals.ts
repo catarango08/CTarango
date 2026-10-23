@@ -2,7 +2,7 @@ import { GOALS, type KrUnit } from '../../config/goals';
 import type { RecordValue } from '../schema';
 import { num } from '../calc';
 import { toDate } from '../format';
-import { placeFor, zoneFor, zonesFromRateBook, type TripZone } from '../geo/territory';
+import { placeFor, zoneForTown, zoneFor, zonesFromRateBook, type TripZone } from '../geo/territory';
 
 /**
  * Goals dashboard math. Pure functions over whole tables, so the page and any
@@ -160,7 +160,9 @@ export function buildGoals(input: {
   let travelFees = 0;
   for (const j of mJobs) {
     const p = placeFor(j.town);
-    const z: TripZone | null = p ? zoneFor(p, zones).zone : null;
+    // Named towns use the drive-mile list; anything else falls back to the straight-line ring.
+    const listed = zoneForTown(j.town, zones).zone;
+    const z: TripZone | null = listed ?? (p ? zoneFor(p, zones).zone : null);
     const k = z ? `Zone ${z.zone}` : p ? 'Outside zones' : 'Unknown town';
     const row = trips.get(k) ?? { trips: 0, fees: 0 };
     row.trips += 1;
