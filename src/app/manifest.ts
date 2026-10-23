@@ -8,7 +8,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'Tarango Electric — field desk',
     short_name: 'Tarango',
-    description: 'New call, advance the ticket, closeout. Show up. Fix it right.',
+    description: 'New call, advance the ticket, closeout. We Show Up. We Do It Right. We Charge Fair.',
     start_url: '/',
     display: 'standalone',
     orientation: 'any',

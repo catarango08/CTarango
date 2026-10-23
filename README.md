@@ -4,7 +4,7 @@ A field-service app for **Tarango Electric**, Corey Tarango's one-truck electric
 company based in Elkland, Missouri. It runs on the **Tarango Electric OS** in Notion — the same
 databases already in the workspace, not a copy.
 
-> Show up. Fix it right.
+> We Show Up. We Do It Right. We Charge Fair.
 
 ![Today](docs/screenshots/today.png)
 

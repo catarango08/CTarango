@@ -27,6 +27,15 @@ palette, so existing classes repaint with no churn.
 
 Loaded with `next/font/google` in `src/app/layout.tsx`.
 
+## Taglines
+
+Source: brand package `_source/html/guidelines.html`, section 06 Voice.
+
+- **Primary (everywhere: app, estimates, cards, signs):** "We Show Up. We Do It Right. We Charge Fair."
+- **Alternate (ads and social only):** "Honest Work. Wired Right. On Time."
+- Never show both on the same small piece (card, magnet, sticker, ad tile).
+- Write them exactly as above. The old "Show up. Fix it right." is retired.
+
 ## Contact
 
 - Phone: **417-501-4752**

@@ -34,8 +34,8 @@ export function Monogram({ className = '' }: { className?: string }) {
 /** The tagline, in Barlow Condensed per the brand package. */
 export function Tagline({ className = '' }: { className?: string }) {
   return (
-    <span className={`font-serif font-semibold uppercase tracking-[0.08em] text-[color:var(--tagline)] ${className}`}>
-      Show up. Fix it right.
+    <span className={`font-serif font-semibold tracking-[0.04em] text-[color:var(--tagline)] ${className}`}>
+      We Show Up. We Do It Right. We Charge Fair.
     </span>
   );
 }

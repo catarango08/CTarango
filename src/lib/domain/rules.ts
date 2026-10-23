@@ -13,7 +13,7 @@ export const BUSINESS = {
   email: 'tarangoelectric417@gmail.com',
   /** Home base. Trip zones are measured from here. */
   base: 'Elkland',
-  tagline: 'Show up. Fix it right.',
+  tagline: 'We Show Up. We Do It Right. We Charge Fair.',
   /** The service area for customer-facing copy. Never Springfield. */
   advertisedTowns: ['Bolivar', 'Buffalo', 'Marshfield', 'Fair Grove', 'Elkland'],
   advertisedCounties: ['Dallas', 'Polk', 'Webster', 'Greene'],
