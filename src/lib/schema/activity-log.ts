@@ -1,7 +1,7 @@
 import type { DbDef } from './types';
 
 /** Activity Log → Type. What kind of touch it was. */
-export const ACTIVITY_TYPES = ['Email', 'Call', 'Text', 'Visit', 'Review Request', 'Review Received'] as const;
+export const ACTIVITY_TYPES = ['Email', 'Call', 'Text', 'Visit', 'Review Request', 'Review Received', 'Task'] as const;
 
 /**
  * Activity Log — the one database the Goals dashboard adds. Outreach touches,
@@ -25,6 +25,8 @@ export const activityLog: DbDef = {
     { key: 'contact', label: 'Contact', type: 'text', column: true },
     { key: 'outcome', label: 'Outcome', type: 'text', column: true },
     { key: 'notes', label: 'Notes', type: 'longtext' },
+    { key: 'assignee', label: 'Assignee', type: 'select', options: ['Corey', 'Estimator', 'Office Manager'], column: true },
+    { key: 'taskDone', label: 'Task done', type: 'checkbox', column: true },
     { key: 'job', label: 'Job', type: 'relation', relation: 'jobs', dualLabel: 'Activity' },
   ],
 };

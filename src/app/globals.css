@@ -80,6 +80,8 @@ body {
 body {
   -webkit-font-smoothing: antialiased;
 }
+html, body { overflow-x: hidden; }
+input[type=checkbox] { width: 1.5rem; height: 1.5rem; }
 
 @layer components {
   .panel {
@@ -107,17 +109,17 @@ body {
   }
 
   .btn {
-    @apply inline-flex items-center gap-1.5 rounded-md border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-3 py-1.5 text-sm font-medium text-[color:var(--ink)] transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent-ink)];
+    @apply inline-flex items-center gap-1.5 rounded-md border border-[color:var(--line-strong)] bg-[color:var(--surface)] min-h-12 px-3 py-1.5 text-base sm:min-h-0 sm:text-sm font-medium text-[color:var(--ink)] transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent-ink)];
   }
   .btn-primary {
-    @apply inline-flex items-center gap-1.5 rounded-md bg-[color:var(--accent)] px-3.5 py-1.5 text-sm font-semibold text-[color:var(--on-accent)] transition hover:brightness-110;
+    @apply inline-flex items-center gap-1.5 rounded-md bg-[color:var(--accent)] min-h-12 justify-center px-3.5 py-1.5 text-base sm:min-h-0 sm:text-sm font-semibold text-[color:var(--on-accent)] transition hover:brightness-110;
   }
   .btn-hazard {
-    @apply inline-flex items-center gap-1.5 rounded-md border border-[color:var(--hazard)] bg-[color:var(--hazard-bg)] px-3 py-1.5 text-sm font-semibold text-[color:var(--hazard)] transition hover:brightness-110;
+    @apply inline-flex items-center gap-1.5 rounded-md border border-[color:var(--hazard)] bg-[color:var(--hazard-bg)] min-h-12 px-3 py-1.5 text-base sm:min-h-0 sm:text-sm font-semibold text-[color:var(--hazard)] transition hover:brightness-110;
   }
 
   .input {
-    @apply w-full rounded-md border border-[color:var(--line-strong)] bg-[color:var(--bg)] px-3 py-2 text-sm text-[color:var(--ink)] outline-none transition placeholder:text-[color:var(--ink-muted)] focus:border-[color:var(--accent)];
+    @apply w-full rounded-md border border-[color:var(--line-strong)] bg-[color:var(--bg)] min-h-12 px-3 py-2 text-base sm:min-h-0 sm:text-sm text-[color:var(--ink)] outline-none transition placeholder:text-[color:var(--ink-muted)] focus:border-[color:var(--accent)];
   }
 
   .th {

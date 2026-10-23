@@ -1,8 +1,11 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { findById, loadAll, relatedTo } from '@/lib/data';
-import { Card, Field, MoneyStat, PageHeader, Stat, StatusPill } from '@/components/ui';
+import { Card, MoneyStat, PageHeader, Stat, StatusPill } from '@/components/ui';
 import { PhotoStrip } from '@/components/photo-strip';
+import { ContactButtons } from '@/components/contact-buttons';
+import { InlineEditor } from '@/components/inline-editor';
+import { CUSTOMER_MAIN, CUSTOMER_MORE, editFields } from '@/lib/edit-fields';
 import { date, money, number } from '@/lib/format';
 import { num, relationIds } from '@/lib/calc';
 
@@ -31,9 +34,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
   const installHours = jobs.reduce((sum, j) => sum + num(j.installHours), 0);
 
   const blocked = String(customer.stage) === 'Do not serve';
-  const phoneHref = customer.phone ? `tel:${String(customer.phone).replace(/[^\d+]/g, '')}` : null;
   const mailHref = customer.email ? `mailto:${String(customer.email)}` : null;
-  const mapsHref = customer.address ? `https://maps.google.com/?q=${encodeURIComponent(String(customer.address))}` : null;
 
   return (
     <>
@@ -59,7 +60,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
         <Stat label="Install hours worked" value={number(installHours)} hint="On this property" />
       </section>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="flex flex-col gap-4 lg:grid lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           <Card title={`Jobs — ${jobs.length}`}>
             {sortedJobs.length === 0 ? (
@@ -69,7 +70,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
                 {sortedJobs.map((job) => (
                   <li key={job.id} className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
                     <div className="min-w-0">
-                      <Link href={`/jobs/${job.id}`} className="font-medium hover:text-[color:var(--accent-ink)]">
+                      <Link href={`/jobs/${job.id}/onsite`} className="flex min-h-11 items-center font-medium hover:text-[color:var(--accent-ink)]">
                         {String(job.name)}
                       </Link>
                       <div className="mt-0.5 text-xs text-[color:var(--ink-muted)]">
@@ -91,41 +92,11 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
           </Card>
         </div>
 
-        <div className="space-y-4">
-          <Card title="Contact">
-            <div className="space-y-3">
-              <Field label="Phone">
-                {phoneHref ? (
-                  <a href={phoneHref} className="text-[color:var(--accent-ink)] underline-offset-2 hover:underline">
-                    {String(customer.phone)}
-                  </a>
-                ) : '—'}
-              </Field>
-              <Field label="Email">
-                {mailHref ? (
-                  <a href={mailHref} className="text-[color:var(--accent-ink)] underline-offset-2 hover:underline">
-                    {String(customer.email)}
-                  </a>
-                ) : '—'}
-              </Field>
-              <Field label="Address">
-                {mapsHref ? (
-                  <a href={mapsHref} target="_blank" rel="noreferrer" className="text-[color:var(--accent-ink)] underline-offset-2 hover:underline">
-                    {String(customer.address)}
-                  </a>
-                ) : '—'}
-              </Field>
-              <Field label="Town">{String(customer.town ?? '—')}</Field>
-              <Field label="How they found us">{String(customer.foundUs ?? '—')}</Field>
-            </div>
-          </Card>
-
-          <Card title="Notes">
-            {customer.notes ? (
-              <p className="whitespace-pre-wrap text-sm">{String(customer.notes)}</p>
-            ) : (
-              <p className="text-sm text-[color:var(--ink-muted)]">Nothing on file. Gate codes, dog warnings — write it here.</p>
-            )}
+        <div className="order-first space-y-4 lg:order-none">
+          <Card title="Customer card — tap a field to edit">
+            <div className="mb-3"><ContactButtons phone={String(customer.phone ?? '')} address={String(customer.address ?? '')} /></div>
+            {mailHref && <a href={mailHref} className="btn mb-3 w-full justify-center">✉️ Email</a>}
+            <InlineEditor db="customers" id={customer.id} fields={editFields('customers', CUSTOMER_MAIN)} values={customer} more={editFields('customers', CUSTOMER_MORE)} />
           </Card>
         </div>
       </div>

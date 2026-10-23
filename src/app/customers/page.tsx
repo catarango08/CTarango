@@ -46,6 +46,7 @@ export default async function CustomersPage({
       <PageHeader
         title="Customers"
         subtitle="Who called, where they are, and whether they have called before."
+        actions={<Link href="/customers/new" className="btn-primary">+ New customer</Link>}
       />
 
       <section className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-3">
