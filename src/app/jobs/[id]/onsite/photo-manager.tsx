@@ -33,7 +33,8 @@ export function PhotoManager({ jobId, saved }: { jobId: string; saved: Saved[] }
 
   function add(files: FileList | null) {
     if (!files?.length) return;
-    setStaged((s) => [...s, ...Array.from(files).map((file) => ({ key: `${file.name}-${file.size}-${Math.random()}`, file, url: URL.createObjectURL(file), tag }))]);
+    const picked = Array.from(files); // copy now: the input is cleared right after, which empties the live FileList
+    setStaged((s) => [...s, ...picked.map((file) => ({ key: `${file.name}-${file.size}-${Math.random()}`, file, url: URL.createObjectURL(file), tag }))]);
   }
   function remove(key: string) { setStaged((s) => { const x = s.find((i) => i.key === key); if (x) URL.revokeObjectURL(x.url); return s.filter((i) => i.key !== key); }); }
 
@@ -44,7 +45,7 @@ export function PhotoManager({ jobId, saved }: { jobId: string; saved: Saved[] }
       staged.forEach((s) => URL.revokeObjectURL(s.url));
       setStaged([]);
       await flushPhotos();
-      router.refresh();
+      if (navigator.onLine) router.refresh();
     } finally { setBusy(false); }
   }
 
@@ -53,12 +54,12 @@ export function PhotoManager({ jobId, saved }: { jobId: string; saved: Saved[] }
     setGone((g) => new Set(g).add(id));
     const res = await fetch(`/api/records/jobPhotos/${id}`, { method: 'DELETE' }).catch(() => null);
     if (!res?.ok) { setGone((g) => { const n = new Set(g); n.delete(id); return n; }); alert('Could not remove it — try again with signal.'); return; }
-    router.refresh();
+    if (navigator.onLine) router.refresh();
   }
   async function retagSaved(id: string, stage: string) {
     setRetag((r) => ({ ...r, [id]: stage }));
     await fetch(`/api/records/jobPhotos/${id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ stage }) }).catch(() => null);
-    router.refresh();
+    if (navigator.onLine) router.refresh();
   }
 
   const visible = saved.filter((p) => !gone.has(p.id) && p.stage !== 'Receipt');
@@ -71,16 +72,16 @@ export function PhotoManager({ jobId, saved }: { jobId: string; saved: Saved[] }
         <div className="grid grid-cols-4 gap-1" role="radiogroup" aria-label="Tag for new photos">
           {PHOTO_TAGS.map((t) => (
             <button key={t} type="button" role="radio" aria-checked={tag === t} onClick={() => setTag(t)}
-              className={`btn min-h-12 px-1 text-sm ${tag === t ? 'btn-primary' : ''}`}>{short(t)}</button>
+              className={`btn min-h-12 justify-center px-1 text-center text-sm ${tag === t ? 'btn-primary' : ''}`}>{short(t)}</button>
           ))}
         </div>
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <label className="btn min-h-14 cursor-pointer justify-center text-base font-semibold">
+        <label className="btn min-h-14 cursor-pointer justify-center text-center text-base font-semibold">
           🖼️ Pick from gallery
           <input data-testid="gallery-input" type="file" accept="image/*" multiple className="sr-only" onChange={(e) => { add(e.target.files); e.target.value = ''; }} />
         </label>
-        <label className="btn min-h-14 cursor-pointer justify-center text-base font-semibold">
+        <label className="btn min-h-14 cursor-pointer justify-center text-center text-base font-semibold">
           📸 Take photo
           <input data-testid="camera-input" type="file" accept="image/*" capture="environment" className="sr-only" onChange={(e) => { add(e.target.files); e.target.value = ''; }} />
         </label>

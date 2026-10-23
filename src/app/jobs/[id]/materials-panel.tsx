@@ -122,7 +122,7 @@ export function MaterialsPanel({
               </span>
               <button
                 type="button"
-                className="min-h-11 shrink-0 px-2 text-[color:var(--hazard)]"
+                className="min-h-12 min-w-12 shrink-0 px-2 text-xl text-[color:var(--hazard)]"
                 onClick={() => void remove(line.id)}
                 disabled={busy}
                 aria-label={`Remove ${line.name}`}

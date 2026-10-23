@@ -62,6 +62,7 @@ export function ReceiptEntry({ jobId }: { jobId: string }) {
       const worker = await createWorker('eng', 1, { logger: (m: { status: string; progress: number }) => { if (m.status === 'recognizing text') setOcr({ state: 'loading', pct: Math.round(m.progress * 100) }); } });
       const { data } = await worker.recognize(file);
       await worker.terminate();
+      if (process.env.NODE_ENV !== 'production') console.info('[ocr]', JSON.stringify((data.lines ?? []).map((l: { text: string; confidence: number }) => [l.text, Math.round(l.confidence)])));
       const lines: OcrLine[] = (data.lines ?? []).map((l: { text: string; confidence: number }) => ({ text: l.text, confidence: l.confidence }));
       const p = parseReceipt(lines.length ? lines : data.text.split('\n').map((t: string) => ({ text: t, confidence: data.confidence })));
       const hl = new Set<string>();
@@ -119,7 +120,7 @@ export function ReceiptEntry({ jobId }: { jobId: string }) {
       }
       if (ok) {
         setRows([blank(supplier, date)]); setReceipt(null); setReceiptPhotoId(undefined); setTotals({ subtotal: '', tax: '', total: '', low: new Set() }); setOcr({ state: 'idle' }); setOpen(false);
-        router.refresh();
+        if (navigator.onLine) router.refresh();
       }
     } finally { setSaving(false); }
   }
@@ -127,7 +128,12 @@ export function ReceiptEntry({ jobId }: { jobId: string }) {
   const flag = (low?: Set<string>, k?: string) => (low && k && low.has(k) ? ' ring-2 ring-orange-500 bg-orange-50/10' : '');
 
   if (!open) {
-    return <button type="button" onClick={() => setOpen(true)} className="btn btn-primary min-h-14 w-full text-base">🧾 Add receipt / parts bought</button>;
+    return (
+      <div>
+        <button type="button" onClick={() => { setOpen(true); setMsg(null); }} className="btn btn-primary min-h-14 w-full text-base">🧾 Add receipt / parts bought</button>
+        {msg && <p className={`mt-2 text-sm ${msg.ok ? 'text-[color:var(--go)]' : 'text-[color:var(--hazard)]'}`}>{msg.text}</p>}
+      </div>
+    );
   }
 
   return (
@@ -177,10 +183,15 @@ export function ReceiptEntry({ jobId }: { jobId: string }) {
             </div>
             <div className="mt-2 flex items-center gap-2">
               <input aria-label={`Line ${i + 1} unit cost`} inputMode="decimal" placeholder="Unit $" className={`input min-h-12 w-24 text-base${flag(r.low, 'unitCost')}`} value={r.unitCost} onChange={(e) => set(r.key, { unitCost: e.target.value })} />
-              <input aria-label={`Line ${i + 1} supplier`} placeholder="Supplier" className="input min-h-12 min-w-0 flex-1 text-sm" value={r.supplier} onChange={(e) => set(r.key, { supplier: e.target.value })} />
-              <span className="w-16 text-right text-sm tabular-nums">{usd(n(r.qty) * n(r.unitCost))}</span>
+              <span className="flex-1 text-right text-base tabular-nums">{usd(n(r.qty) * n(r.unitCost))}</span>
             </div>
-            <input aria-label={`Line ${i + 1} date`} type="date" className="input mt-2 min-h-12 w-full text-sm" value={r.date} onChange={(e) => set(r.key, { date: e.target.value })} />
+            <details className="mt-1 text-sm" open={r.supplier !== supplier || r.date !== date}>
+              <summary className="flex min-h-12 cursor-pointer items-center text-[color:var(--ink-muted)]">{r.supplier || 'No supplier'} · {r.date}</summary>
+              <div className="grid grid-cols-2 gap-2">
+                <input aria-label={`Line ${i + 1} supplier`} placeholder="Supplier" className="input min-h-12 min-w-0 text-sm" value={r.supplier} onChange={(e) => set(r.key, { supplier: e.target.value })} />
+                <input aria-label={`Line ${i + 1} date`} type="date" className="input min-h-12 min-w-0 text-sm" value={r.date} onChange={(e) => set(r.key, { date: e.target.value })} />
+              </div>
+            </details>
           </div>
         ))}
       </div>

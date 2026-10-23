@@ -65,8 +65,14 @@ export function parseReceipt(lines: OcrLine[]): ParsedReceipt {
 
   const items: ParsedLine[] = [];
   for (const l of clean) {
+    if (SKIP.test(l.text)) continue;
     const m = l.text.match(MONEY);
-    if (!m || SKIP.test(l.text)) continue;
+    if (!m) {
+      // "4 @ 1.29 1/2 EMT CONNECTOR 5816)" — smudged line total, but qty @ price is readable: rebuild it, flagged.
+      const q = l.text.match(/^(\d{1,3})\s*[@x]\s*\$?(\d+[.,]\d{2})\s+(.*?[A-Za-z]{2,}.*?)(?:\s+\S*\d\S*)?$/i);
+      if (q) { const qty = Number(q[1]), unitCost = money(q[2]); items.push({ description: q[3].trim(), qty, unitCost, amount: r2(qty * unitCost), confidence: Math.min(l.confidence, 40) }); }
+      continue;
+    }
     const amount = money(m[1]);
     let rest = l.text.slice(0, m.index).trim();
     let qty = 1, unitCost = amount;

@@ -22,7 +22,7 @@ export function QuickPhoto({ jobId, stages, counts }: { jobId: string; stages: s
       await flushPhotos();
       const left = (await listQueued()).length;
       setMsg(left ? { ok: false, text: `${stage}: saved on this phone — uploads when you have signal.` } : { ok: true, text: `${stage} photo saved.` });
-      router.refresh();
+      if (navigator.onLine) router.refresh();
     } catch (e) {
       setLocal((l) => ({ ...l, [stage]: Math.max(0, (l[stage] ?? 1) - list.length) }));
       setMsg({ ok: false, text: `${stage}: ${e instanceof Error ? e.message : 'failed'} — tap again.` });
