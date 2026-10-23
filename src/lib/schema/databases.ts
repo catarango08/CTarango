@@ -75,6 +75,7 @@ export const PHOTO_STAGES = [
   'Torque / labeling',
   'Hidden damage',
   'Permit',
+  'Receipt',
 ] as const;
 
 /**
@@ -395,6 +396,8 @@ const jobMaterials: DbDef = {
     { key: 'billable', label: 'Billable', type: 'checkbox', column: true },
     { key: 'pulledFromTruck', label: 'Pulled from truck', type: 'checkbox', derived: true, help: 'Set once the van count has been decremented.' },
     { key: 'usedOn', label: 'Used on', type: 'date', column: true },
+    { key: 'supplier', label: 'Supplier', type: 'text', column: true, help: 'Where it was bought (from the receipt).' },
+    { key: 'receipt', label: 'Receipt', type: 'files', help: 'Receipt photo for this purchase.' },
     { key: 'notes', label: 'Notes', type: 'longtext' },
   ],
 };
