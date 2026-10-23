@@ -1,7 +1,7 @@
 # Tarango Electric — field desk
 
 A field-service app for **Tarango Electric**, Corey Tarango's one-truck electrical service
-company in Bolivar, Missouri. It runs on the **Tarango Electric OS** in Notion — the same
+company based in Elkland, Missouri. It runs on the **Tarango Electric OS** in Notion — the same
 databases already in the workspace, not a copy.
 
 > Show up. Fix it right.
@@ -45,14 +45,19 @@ endpoint, so nothing is unreachable.
 
 From the *Rate card rules* page, encoded in `src/lib/domain/rules.ts`:
 
-- Residential diagnostic **$119**, credited if repaired the same visit. Commercial **$149**
-  first hour, then **$125/hr**.
-- Travel Zone A (Bolivar, Buffalo, Marshfield city) included, **B $45**, **C $85**.
+Trip, hour and zone prices are read live from the Notion **Rate Book** (`src/lib/pricing.ts`),
+with matching fallbacks in `src/lib/domain/pricing.ts`. Other rules are in `rules.ts`.
+
+- Residential day trip / diagnostic **$160**: the Zone 1 trip plus the first hour, then
+  **$90/hr**. After-hours trip **$240**, emergency **$315**, holiday **$320**.
+- Commercial diagnostic **$195**, then **$110/hr** days, **$165** after hours, **$220** holiday.
+  Trips: after-hours **$295**, emergency **$370**, holiday **$390**.
+- Zones from Elkland: **1 $70**, **2 $115**, **3 $155**. Trips already include Zone 1, so
+  outer zones add only the difference. After-hours, emergency and holiday never multiply the zone.
+- Flat rates are plus the zone fee. The LOTO add-on has no trip fee.
 - Materials **cost + 35%**. Deposit **50% over $1,500**. Old work **+25%**.
-  After hours **1.5×**. Holiday **2×**, only if you answer.
 - Residential pays at completion. New commercial is due on completion, then Net 15.
-- Generator *installs* stay closed until load-bank testers are on the truck. Service and
-  annual inspections are open.
+- Generators are open. Generator push: hookups from **$750**, **$50 off** if booked by Nov 22.
 
 Change a number there and it changes in the quote builder, the ticket and the rate card at once.
 
@@ -73,20 +78,9 @@ already in `notion.config.json`, so a token is the only secret to supply.
 
 ## Brand
 
-The kit is a four-colour lock. Nothing outside it appears in the UI.
-
-| | Hex | Role |
-| --- | --- | --- |
-| Charcoal | `#222426` | Type on paper, surfaces at night |
-| Aged White | `#F5F1E8` | Paper — the default background |
-| Harvest Gold | `#B8871F` | Rules, fills and small caps. **Never body text** — it is 2.9:1 on paper |
-| Oxide Red | `#8E382F` | Tagline and hazard only. Never decoration |
-
-Two themes, both inside the lock: **Day** (paper, the default, because most calls happen in
-Missouri daylight) and **Night** (the charcoal truck field, for attics and after-dark calls).
-Estimates render on paper in either theme, with the wordmark and tagline and no barn badge —
-the kit says no barn on legal pages. Every text/background pair is checked against WCAG AA;
-see [`docs/BRAND.md`](docs/BRAND.md) for the ratios and the full do-not-print list.
+Brand package v1.0 (Oct 2026): Tarango Red `#E01E25`, Panel Black `#0C0C0C`, white, with
+Conduit Gray and Light Gray as support. Anton for headlines, Barlow Condensed for labels,
+Barlow for body. Day and Night themes. See [`docs/BRAND.md`](docs/BRAND.md).
 
 ## Architecture
 
@@ -115,5 +109,3 @@ columns. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
   be read but their source cannot. The app restates that logic from the OS pages that define
   it and shows Notion's `Play` alongside its own, so the two can be compared.
 - **Photos cap at 20 MB** each — Notion's single-part upload limit.
-- One thing in the kit contradicts itself: the Do/Don't table says not to set the phone number
-  in Harvest Gold, but `magnet.svg` does exactly that. The app follows the written rule.
