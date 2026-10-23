@@ -12,6 +12,7 @@ const SECTIONS: { heading: string; items: { href: string; label: string }[] }[] 
     heading: 'Run the truck',
     items: [
       { href: '/', label: 'Today' },
+      { href: '/dashboard', label: 'Goals' },
       { href: '/new-call', label: 'New call' },
       { href: '/jobs', label: 'Jobs' },
       { href: '/photos', label: 'Photos' },
@@ -30,6 +31,7 @@ const SECTIONS: { heading: string; items: { href: string; label: string }[] }[] 
     items: [
       { href: '/customers', label: 'Customers' },
       { href: '/territory', label: 'Territory' },
+      { href: '/map', label: 'Map' },
       { href: '/referrals', label: 'Referrals' },
       { href: '/equipment', label: 'Keep Power' },
       { href: '/permits', label: 'Permit offices' },

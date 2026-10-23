@@ -94,7 +94,9 @@ export type DbKey =
   | 'territory'
   | 'jobPhotos'
   | 'truckInventory'
-  | 'jobMaterials';
+  | 'jobMaterials'
+  | 'activityLog'
+  | 'dailyDigest';
 
 /** A record as the app sees it: plain JSON, Notion page id under `id`. */
 export interface RecordValue {
