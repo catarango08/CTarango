@@ -35,12 +35,16 @@ export interface Pricing {
 }
 
 export const ZONE_LABELS: Record<ZoneNumber, string> = {
-  1: 'Up to ~16 mi from Elkland',
-  2: '~17–32 mi from Elkland',
-  3: '32–50 mi from Elkland',
+  1: 'Up to ~16 drive miles from Elkland',
+  2: '~17–32 drive miles from Elkland',
+  3: '32–50 drive miles from Elkland',
 };
 
-/** Residential (everyone who is not commercial). Matches the Rate Book. */
+/**
+ * Residential (everyone who is not commercial). Matches the Rate Book.
+ * Holiday T&M ($180) is its own active row. Emergency hours bill at the
+ * after-hours rate (no separate row).
+ */
 export const RESIDENTIAL_FALLBACK: TierRates = {
   trip: { day: 160, afterHours: 240, emergency: 315, holiday: 320 },
   hourly: { day: 90, afterHours: 135, emergency: 135, holiday: 180 },

@@ -25,9 +25,10 @@ export interface Forecast {
  * ------------------------------------------------------------------ */
 
 /**
- * Town → trip zone, measured from Elkland, per the Rate Book's zone lists.
- * Towns and counties not on those lists default to Zone 3 and are flagged
- * "confirm zone" so nobody under-quotes a long drive.
+ * Town → trip zone, by drive miles from Elkland, per the Rate Book's zone
+ * lists. County options are zoned by the job's address, so they default to
+ * Zone 3 and say "zone by address". Anything else unlisted is Zone 3,
+ * "confirm zone", so nobody under-quotes a long drive.
  */
 const TOWN_ZONE: Record<string, ZoneNumber> = {
   // Zone 1
@@ -44,12 +45,20 @@ const TOWN_ZONE: Record<string, ZoneNumber> = {
   'Louisburg': 2,
   'Seymour': 2,
   'Rogersville': 2,
+  'Brighton': 2,
+  'Morrisville': 2,
+  'Halfway': 2,
+  'Fordland': 2,
   // Zone 3
   'Urbana': 3,
   'Walnut Grove': 3,
   'Ash Grove': 3,
   'Humansville': 3,
+  'Bennett Springs (Dallas Co)': 3,
 };
+
+/** County options: the address decides the zone. */
+const COUNTY_OPTIONS = new Set(['Dallas Co', 'Polk Co', 'Webster Co', 'Greene Co']);
 
 /** One-way minutes when there is no history to go on. */
 const ZONE_DEFAULT_MINUTES: Record<ZoneNumber, number> = { 1: 15, 2: 30, 3: 50 };
@@ -58,9 +67,11 @@ export function zoneForTown(town: unknown): ZoneNumber {
   return TOWN_ZONE[String(town ?? '').trim()] ?? 3;
 }
 
-/** True when the town is not on a Rate Book zone list, so Zone 3 is a guess. */
-export function zoneNeedsConfirm(town: unknown): boolean {
-  return !(String(town ?? '').trim() in TOWN_ZONE);
+/** Why the zone is a default, or null when the town is on a Rate Book zone list. */
+export function zoneFlag(town: unknown): 'zone by address' | 'confirm zone' | null {
+  const t = String(town ?? '').trim();
+  if (COUNTY_OPTIONS.has(t)) return 'zone by address';
+  return t in TOWN_ZONE ? null : 'confirm zone';
 }
 
 /** Full zone fee for a flat-rate visit to this town (fallback prices). */
@@ -85,7 +96,7 @@ export function forecastTravel(town: unknown, jobs: RecordValue[]): Forecast {
   if (history.length === 0) {
     return {
       minutes: fallback,
-      basis: `Zone ${zone} default${zoneNeedsConfirm(name) ? ' (confirm zone)' : ''}, no drive time logged for ${name || 'this town'} yet`,
+      basis: `Zone ${zone} default${zoneFlag(name) ? ` (${zoneFlag(name)})` : ''}, no drive time logged for ${name || 'this town'} yet`,
       sample: 0,
       confidence: 'default',
     };
