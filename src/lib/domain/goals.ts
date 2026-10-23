@@ -87,10 +87,8 @@ function activityCount(rows: RecordValue[], types: string[], from: Date, to: Dat
 }
 
 const NEEDS = {
-  quotedDate: 'Jobs has no "Quoted on" date, so the app cannot tell when an estimate went out.',
-  followUp: 'Jobs has no "Quoted on" or "Followed up" date to measure the 48-hour window.',
   overhead: 'Jobs has no cost or profit field. Profit here is revenue minus Job Materials only — fuel, insurance and tools are not in the OS.',
-  partnerLink: 'Jobs.Source says "HVAC referral" but does not link to which partner sent it.',
+  partnerLink: 'Set Jobs → Referred By to credit the partner who sent the lead.',
 };
 
 export function buildGoals(input: {
@@ -120,6 +118,18 @@ export function buildGoals(input: {
   const revenueOf = (jobs: RecordValue[]) => jobs.reduce((s, j) => s + num(j.amount), 0);
   const profitOf = (jobs: RecordValue[]) => jobs.reduce((s, j) => s + num(j.amount) - materialsFor(j.id), 0);
   const leadsIn = (from: Date, to: Date) => input.jobs.filter((j) => inRange(j.callIn || j.createdTime, from, to));
+  const quotedIn = (from: Date, to: Date) => input.jobs.filter((j) => inRange(j.quotedOn, from, to));
+  const followUpRate = (from: Date, to: Date): number | null => {
+    const due = quotedIn(from, to).filter((j) => { const q = toDate(j.quotedOn); return q ? now.getTime() - q.getTime() >= 2 * 86_400_000 : false; });
+    if (!due.length) return null;
+    const hit = due.filter((j) => {
+      const q = toDate(j.quotedOn)!;
+      const end = new Date(q.getTime() + 3 * 86_400_000); // through the end of day +2
+      return input.activity.some((a) => ['Call', 'Text'].includes(String(a.type)) && relId(a.job).includes(j.id) && inRange(a.date, q, end));
+    });
+    return hit.length / due.length;
+  };
+  const partnersSending = input.referrals.filter((r) => input.jobs.some((j) => relId(j.referredBy).includes(r.id))).length;
 
   /* ---- weekly -------------------------------------------------------- */
   const wJobs = completedIn(weekStart, weekEnd);
@@ -129,16 +139,18 @@ export function buildGoals(input: {
     { key: 'touches', label: 'Outreach touches', target: GOALS.weekly.outreachTouches, unit: 'count',
       actual: activityCount(input.activity, ['Email', 'Call', 'Text', 'Visit'], weekStart, weekEnd), note: 'Activity Log: emails, calls, texts, visits.' },
     { key: 'calls', label: 'Calls', target: GOALS.weekly.calls, unit: 'count', actual: activityCount(input.activity, ['Call'], weekStart, weekEnd), note: 'Activity Log.' },
-    { key: 'estimates', label: 'Estimates sent', target: GOALS.weekly.estimatesSent, unit: 'count', actual: null, needs: NEEDS.quotedDate,
-      note: `${input.jobs.filter((j) => String(j.status) === 'Quoted').length} jobs sit in Quoted right now.` },
+    { key: 'estimates', label: 'Estimates sent', target: GOALS.weekly.estimatesSent, unit: 'count', actual: quotedIn(weekStart, weekEnd).length,
+      note: 'Jobs → Quoted On this week. Set when a job moves to Quoted.' },
     { key: 'closeRate', label: 'Close rate', target: GOALS.weekly.closeRate, unit: 'percent',
       actual: wDecided.length ? wWon.length / wDecided.length : null,
       needs: wDecided.length ? undefined : 'No quotes decided (won, declined or lost) on leads that came in this week yet.',
-      note: 'Won ÷ (won + declined + lost), leads that came in this week. Approximate until Jobs has a quoted date.' },
+      note: 'Won ÷ (won + declined + lost), leads that came in this week. Approximate: based on statuses.' },
     { key: 'jobs', label: 'Jobs completed', target: GOALS.weekly.jobsCompleted, unit: 'count', actual: wJobs.length, note: 'Invoiced, Closed or Paid.' },
     { key: 'revenue', label: 'Revenue', target: GOALS.weekly.revenue, unit: 'money', actual: revenueOf(wJobs) },
     { key: 'profit', label: 'Profit (after materials)', target: GOALS.weekly.profit, unit: 'money', actual: profitOf(wJobs), note: NEEDS.overhead },
-    { key: 'followUp', label: 'Estimates followed up within 48h', target: GOALS.weekly.followUpWithin48h, unit: 'percent', actual: null, needs: NEEDS.followUp },
+    { key: 'followUp', label: 'Estimates followed up within 48h', target: GOALS.weekly.followUpWithin48h, unit: 'percent', actual: followUpRate(weekStart, weekEnd),
+      needs: followUpRate(weekStart, weekEnd) === null ? 'No quote from this week is 48 hours old yet.' : undefined,
+      note: 'Quotes with a call or text logged against the job within 48 hours of Quoted On.' },
     { key: 'reviews', label: 'Reviews requested', target: GOALS.weekly.reviewsRequested, unit: 'percent',
       actual: wJobs.length ? wJobs.filter((j) => j.reviewAsked).length / wJobs.length : null,
       needs: wJobs.length ? undefined : 'No jobs completed this week yet.', note: 'Jobs → Review asked, on completed jobs.' },
@@ -214,8 +226,8 @@ export function buildGoals(input: {
   const actualFor: Record<string, Pick<Metric, 'actual' | 'needs' | 'note'>> = {
     'o1-profit': { actual: bestProfit, note: 'Best month so far. ' + NEEDS.overhead },
     'o1-jobs': { actual: mJobs.length, note: 'This month.' },
-    'o1-estimates': { actual: null, needs: NEEDS.quotedDate },
-    'o2-partners': { actual: null, needs: NEEDS.partnerLink, note: `${activePartners.length} partners are Active in Referrals.` },
+    'o1-estimates': { actual: quotedIn(monthStart, monthEnd).length, note: 'Jobs → Quoted On this month.' },
+    'o2-partners': { actual: partnersSending, note: `Referrals linked from Jobs → Referred By with 1+ job. ${activePartners.length} partners are Active in Referrals.` },
     'o2-reviews': { actual: reviewsReceived, note: 'Activity Log → Review Received.' },
     'o2-gen-quotes': { actual: genQuotes.length, note: 'Generator jobs at Quoted or later.' },
     'o3-fulltime': { actual: streak, note: 'Current streak of $4,500+ profit months. ' + NEEDS.overhead },

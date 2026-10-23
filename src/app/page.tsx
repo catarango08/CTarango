@@ -9,6 +9,7 @@ import { BUSINESS, HARD_LINES, LICENSE } from '@/lib/domain/rules';
 import { date, money, number, relativeDays } from '@/lib/format';
 import { num } from '@/lib/calc';
 import { MorningDigest } from '@/components/morning-digest';
+import { HomeClose } from '@/components/home-close';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,6 +38,7 @@ export default async function TodayPage() {
       />
 
       <MorningDigest />
+      <HomeClose />
 
       {today.alerts.length > 0 && (
         <section className="mb-6 space-y-2">
