@@ -83,7 +83,7 @@ export default async function OnsitePage({ params }: { params: Promise<{ id: str
   const notesFields = editFields('jobs', ['notes', 'siteConditions', 'diagnosis', 'workPerformed']);
 
   return (
-    <div className="-mt-4 space-y-4 pb-28">
+    <div className="space-y-4 pb-28">
       {/* Who, where, and the one thing to do next. */}
       <section className="panel p-4">
         <div className="flex items-start justify-between gap-2">
@@ -104,12 +104,14 @@ export default async function OnsitePage({ params }: { params: Promise<{ id: str
         <div className="mt-3"><ContactButtons phone={phone} address={address} /></div>
         {address && <p className="mt-2 break-words text-sm text-[color:var(--ink-muted)]">{address}</p>}
         {customer?.accessNotes ? <p className="mt-2 rounded bg-[color:var(--surface-2)] p-2 text-sm">🔑 {String(customer.accessNotes)}</p> : null}
-        <a href={step.href} className="btn-primary mt-3 min-h-14 w-full text-lg">{step.label} →</a>
+        <div id="arrive" className="mt-3 scroll-mt-20">
+          <WorkTimer jobId={id} arrived={job.arrived ? String(job.arrived) : undefined} started={job.startedAt ? String(job.startedAt) : undefined} done={job.doneAt ? String(job.doneAt) : undefined} />
+        </div>
+        {!step.href.startsWith('#') && <a href={step.href} className="btn-primary mt-3 min-h-14 w-full text-lg">{step.label} →</a>}
       </section>
 
-      <Card title="Arrive · work timer"><div id="arrive" className="scroll-mt-20" />
-        <WorkTimer jobId={id} arrived={job.arrived ? String(job.arrived) : undefined} started={job.startedAt ? String(job.startedAt) : undefined} done={job.doneAt ? String(job.doneAt) : undefined} />
-        <div className="mt-3"><InlineEditor db="jobs" id={id} fields={jobMain} values={job} /></div>
+      <Card title="Job — status, schedule, amount">
+        <InlineEditor db="jobs" id={id} fields={jobMain} values={job} />
       </Card>
 
       <Card title="Notes"><div id="notes" className="scroll-mt-20" />

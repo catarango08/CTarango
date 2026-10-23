@@ -52,7 +52,8 @@ export default async function JobsPage({
         }
       />
 
-      <div className="mb-4 space-y-2">
+      <details className="mb-4 space-y-2" open={Boolean(town || type)}>
+        <summary className="btn mb-2 cursor-pointer">Filter{town || type ? `: ${[town, type].filter(Boolean).join(', ')}` : ' by town / type'}</summary>
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="label mr-1">Town</span>
           <Link href={filterHref({ town: undefined })} className={chip(!town)}>All</Link>
@@ -67,7 +68,7 @@ export default async function JobsPage({
             <Link key={t} href={filterHref({ type: t })} className={chip(type === t)}>{t}</Link>
           ))}
         </div>
-      </div>
+      </details>
 
       {jobs.length === 0 ? (
         <Empty title="No tickets match" hint="Clear the filter, or take a call." />
@@ -113,7 +114,7 @@ export default async function JobsPage({
 }
 
 function chip(active: boolean): string {
-  return `chip min-h-8 ${active ? 'border-[color:var(--accent)] text-[color:var(--accent-ink)]' : ''}`;
+  return `chip min-h-11 px-3 text-sm ${active ? 'border-[color:var(--accent)] text-[color:var(--accent-ink)]' : ''}`;
 }
 
 function JobCard({ job, territory, muted }: { job: RecordValue; territory: RecordValue[]; muted?: boolean }) {
@@ -124,7 +125,7 @@ function JobCard({ job, territory, muted }: { job: RecordValue; territory: Recor
 
   return (
     <Link
-      href={`/jobs/${job.id}`}
+      href={`/jobs/${job.id}/onsite`}
       className={`block rounded border p-2.5 transition hover:border-[color:var(--accent)] ${
         verdict.blockQuote && !muted
           ? 'border-[color:var(--hazard)] bg-[color:var(--hazard-bg)]'
