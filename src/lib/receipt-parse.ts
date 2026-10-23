@@ -22,11 +22,12 @@ const KNOWN = ['Home Depot', "Lowe's", 'Lowes', 'Graybar', 'Rexel', 'CED', 'Cres
 const money = (s: string) => Number(s.replace(/[$\s,](?=\d{3}\b)/g, '').replace(/,(\d{2})$/, '.$1').replace(/[$\s,]/g, ''));
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
-function findDate(text: string): string {
+function findDate(text: string, guess = false): string {
   const m = text.match(/\b(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})\b/) ?? null;
   if (m) {
     let y = Number(m[3]); if (y < 100) y += 2000;
-    const mo = Number(m[1]), d = Number(m[2]);
+    // OCR often reads 0 as 6 or 8 ("16/21/2026"): retry the month with that swap, caller flags it.
+    const mo = Number(guess ? m[1].replace(/[68]/g, '0') : m[1]), d = Number(m[2]);
     if (mo >= 1 && mo <= 12 && d >= 1 && d <= 31) return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
   }
   const iso = text.match(/\b(20\d{2})-(\d{2})-(\d{2})\b/);
@@ -51,7 +52,9 @@ export function parseReceipt(lines: OcrLine[]): ParsedReceipt {
   }
 
   const dateLine = clean.find((l) => findDate(l.text));
-  const date = dateLine ? { value: findDate(dateLine.text), confidence: dateLine.confidence } : { value: '', confidence: 0 };
+  const guessLine = dateLine ? null : clean.find((l) => findDate(l.text, true));
+  const date = dateLine ? { value: findDate(dateLine.text), confidence: dateLine.confidence }
+    : guessLine ? { value: findDate(guessLine.text, true), confidence: 45 } : { value: '', confidence: 0 };
 
   const pick = (re: RegExp) => {
     const l = [...clean].reverse().find((x) => re.test(x.text) && MONEY.test(x.text));
@@ -62,6 +65,14 @@ export function parseReceipt(lines: OcrLine[]): ParsedReceipt {
   let total = pick(/^(?!.*sub).*\b(total|balance due|amount due)\b/i);
   // A smudged decimal ("TOTAL 136551") reads as no money at all: fall back to subtotal + tax, flagged.
   if (total.value == null && subtotal.value != null) total = { value: r2(subtotal.value + (tax.value ?? 0)), confidence: 50 };
+  // Subtotal + tax must equal total. If not, the least-sure number is suspect; trust the other two, flag it.
+  let taxFixed = tax;
+  if (subtotal.value != null && total.value != null && tax.value != null && Math.abs(subtotal.value + tax.value - total.value) > 0.02) {
+    const suspect = Math.min(subtotal.confidence, tax.confidence, total.confidence);
+    if (suspect === tax.confidence) taxFixed = { value: r2(total.value - subtotal.value), confidence: 45 };
+    else if (suspect === total.confidence) total = { value: r2(subtotal.value + tax.value), confidence: 45 };
+    else { taxFixed = { ...tax, confidence: 45 }; total = { ...total, confidence: 45 }; }
+  }
 
   const items: ParsedLine[] = [];
   for (const l of clean) {
@@ -77,6 +88,7 @@ export function parseReceipt(lines: OcrLine[]): ParsedReceipt {
     let rest = l.text.slice(0, m.index).trim();
     let qty = 1, unitCost = amount;
     // "2 @ 4.98", "2 x 4.98", "2 EA 4.98", or a leading quantity "3 WIRE NUT"
+    rest = rest.replace(/^(\d{1,3})[.,:]\s*@/, '$1 @');
     const at = rest.match(/(\d+(?:\.\d+)?)\s*(?:@|x|ea\b|EA\b)\s*\$?(\d+[.,]\d{2})\s*$/i)
       ?? rest.match(/^(\d+(?:\.\d+)?)\s*(?:@|x)\s*\$?(\d+[.,]\d{2})\s+/i);
     if (at) { qty = Number(at[1]); unitCost = money(at[2]); rest = at.index === 0 ? rest.slice(at[0].length).trim() : rest.slice(0, at.index).trim(); }
@@ -91,7 +103,7 @@ export function parseReceipt(lines: OcrLine[]): ParsedReceipt {
     items.push({ description: rest, qty, unitCost: r2(unitCost), amount: r2(amount), confidence });
   }
 
-  return { supplier, date, items, subtotal, tax, total };
+  return { supplier, date, items, subtotal, tax: taxFixed, total };
 }
 
 /** Does the line-item sum agree with the receipt? Returns the difference against the subtotal (or total − tax). */
