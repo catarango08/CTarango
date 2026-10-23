@@ -2,6 +2,8 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { compressImage } from '@/lib/client/image';
+import { flushPhotos, listQueued, queuePhoto } from '@/lib/client/upload-queue';
 
 /** One tap per stage: opens the camera, uploads on shutter. No form. */
 export function QuickPhoto({ jobId, stages, counts }: { jobId: string; stages: string[]; counts: Record<string, number> }) {
@@ -12,23 +14,18 @@ export function QuickPhoto({ jobId, stages, counts }: { jobId: string; stages: s
 
   async function upload(stage: string, files: FileList | null) {
     if (!files?.length) return;
-    const form = new FormData();
-    for (const f of Array.from(files)) form.append('file', f);
-    form.append('stage', stage);
-    form.append('caption', stage);
-    form.append('customerOk', 'true');
-    form.append('job', jobId);
+    const list = Array.from(files);
     setBusy(stage);
-    setLocal((l) => ({ ...l, [stage]: (l[stage] ?? 0) + files.length }));
+    setLocal((l) => ({ ...l, [stage]: (l[stage] ?? 0) + list.length }));
     try {
-      const res = await fetch('/api/photos', { method: 'POST', body: form });
-      const data = (await res.json().catch(() => ({}))) as { error?: string; failed?: { reason: string }[] };
-      if (!res.ok) throw new Error(data.error ?? data.failed?.[0]?.reason ?? 'Upload failed');
-      setMsg({ ok: true, text: `${stage} photo saved.` });
-      router.refresh();
+      for (const f of list) await queuePhoto({ jobId, stage, caption: stage, name: f.name.replace(/\.\w+$/, '') + '.jpg', blob: await compressImage(f) });
+      await flushPhotos();
+      const left = (await listQueued()).length;
+      setMsg(left ? { ok: false, text: `${stage}: saved on this phone — uploads when you have signal.` } : { ok: true, text: `${stage} photo saved.` });
+      if (navigator.onLine) router.refresh();
     } catch (e) {
-      setLocal((l) => ({ ...l, [stage]: Math.max(0, (l[stage] ?? 1) - files.length) }));
-      setMsg({ ok: false, text: `${stage}: ${e instanceof Error ? e.message : 'failed'} — tap again when you have signal.` });
+      setLocal((l) => ({ ...l, [stage]: Math.max(0, (l[stage] ?? 1) - list.length) }));
+      setMsg({ ok: false, text: `${stage}: ${e instanceof Error ? e.message : 'failed'} — tap again.` });
     } finally {
       setBusy(null);
     }

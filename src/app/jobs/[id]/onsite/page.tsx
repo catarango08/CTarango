@@ -4,7 +4,6 @@ import { notFound } from 'next/navigation';
 import { findById, loadAll, relatedTo } from '@/lib/data';
 import { ARRIVAL_PHOTO_STAGES, PHOTO_STAGES, REQUIRED_PHOTO_STAGES } from '@/lib/schema';
 import { Card } from '@/components/ui';
-import { PhotoStrip } from '@/components/photo-strip';
 import { ContactButtons } from '@/components/contact-buttons';
 import { InlineEditor } from '@/components/inline-editor';
 import { ReviewPrompt } from '@/components/review-prompt';
@@ -18,6 +17,8 @@ import { firstName } from '@/lib/domain/pipeline';
 import { CUSTOMER_MAIN, CUSTOMER_MORE, JOB_MORE, editFields } from '@/lib/edit-fields';
 import { MaterialsPanel } from '../materials-panel';
 import { QuickPhoto } from './quick-photo';
+import { PhotoManager } from './photo-manager';
+import { ReceiptEntry } from './receipt-entry';
 import { WorkTimer } from './timer';
 import { MessageDrafts } from './messages';
 import { NextSteps } from './next-steps';
@@ -122,10 +123,11 @@ export default async function OnsitePage({ params }: { params: Promise<{ id: str
 
       <Card title={`Photos${missing.length ? ` — still need ${missing.join(', ')}` : ''}`}><div id="photos" className="scroll-mt-20" />
         <QuickPhoto jobId={id} stages={[...new Set([...REQUIRED_PHOTO_STAGES, ...ARRIVAL_PHOTO_STAGES, ...PHOTO_STAGES])].slice(0, 8)} counts={counts} />
-        {photos.length > 0 && <div className="mt-3"><PhotoStrip photos={photos} /></div>}
+        <div className="mt-3"><PhotoManager jobId={id} saved={photos.map((p) => ({ id: p.id, url: (Array.isArray(p.file) ? (p.file as { url?: string }[])[0]?.url : '') ?? '', stage: String(p.stage ?? 'Other'), caption: String(p.caption ?? '') }))} /></div>
       </Card>
 
       <Card title={`Parts — ${money(totals.cost)} cost, ${money(totals.billed)} billed`}><div id="materials" className="scroll-mt-20" />
+        <div className="mb-3"><ReceiptEntry jobId={id} /></div>
         <MaterialsPanel
           jobId={id}
           markup={MONEY.materialsMarkup}
