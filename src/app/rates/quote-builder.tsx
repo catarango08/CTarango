@@ -1,8 +1,9 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { buildQuote, type QuoteLine } from '@/lib/domain/quote';
-import { MONEY, TRAVEL_ZONES, checkCopy, type TravelZone } from '@/lib/domain/rules';
+import { buildQuote, tripLabel, type QuoteLine } from '@/lib/domain/quote';
+import { MONEY, checkCopy } from '@/lib/domain/rules';
+import { ZONE_LABELS, type Pricing, type Tier, type TripKind, type ZoneNumber } from '@/lib/domain/pricing';
 import { Wordmark, Tagline } from '@/components/brand';
 import { money } from '@/lib/format';
 
@@ -13,14 +14,15 @@ interface Rate { id: string; name: string; book: string; price: number; assumes:
  * buildQuote() and all the percentages in MONEY — nothing is hardcoded here,
  * so changing a rule changes the quote everywhere at once.
  */
-export function QuoteBuilder({ rates }: { rates: Rate[] }) {
+export function QuoteBuilder({ rates, pricing }: { rates: Rate[]; pricing: Pricing }) {
   const [lines, setLines] = useState<QuoteLine[]>([]);
   const [pick, setPick] = useState('');
   const [materialCost, setMaterialCost] = useState('');
-  const [zone, setZone] = useState<TravelZone>('A');
+  const [zone, setZone] = useState<ZoneNumber>(1);
+  const [tier, setTier] = useState<Tier>('residential');
+  const [trip, setTrip] = useState<TripKind>('none');
+  const [extraHours, setExtraHours] = useState('');
   const [oldWork, setOldWork] = useState(false);
-  const [afterHours, setAfterHours] = useState(false);
-  const [holiday, setHoliday] = useState(false);
   const [credit, setCredit] = useState('');
   const [scope, setScope] = useState('');
 
@@ -28,13 +30,15 @@ export function QuoteBuilder({ rates }: { rates: Rate[] }) {
     () =>
       buildQuote({
         lines,
-        travelZone: zone,
+        pricing,
+        tier,
+        zone,
+        trip,
+        extraHours: Number(extraHours) || 0,
         oldWork,
-        afterHours,
-        holiday,
         creditDiagnostic: Number(credit) || 0,
       }),
-    [lines, zone, oldWork, afterHours, holiday, credit],
+    [lines, pricing, tier, zone, trip, extraHours, oldWork, credit],
   );
 
   const copyProblems = checkCopy(scope);
@@ -66,8 +70,9 @@ export function QuoteBuilder({ rates }: { rates: Rate[] }) {
     setMaterialCost('');
   }
 
-  const flats = rates.filter((r) => r.book === 'Residential flat' || r.book === 'Commercial / critical');
-  const labor = rates.filter((r) => r.book === 'Labor / dispatch');
+  // Trips, hours and zones are set with the controls below, so only flats are picked here.
+  const flats = rates.filter((r) => r.book === (tier === 'commercial' ? 'Commercial / critical' : 'Residential flat'));
+  const tripKinds: TripKind[] = ['none', 'day', 'afterHours', 'emergency', 'holiday'];
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
@@ -77,16 +82,9 @@ export function QuoteBuilder({ rates }: { rates: Rate[] }) {
           <div className="mt-1 flex gap-2">
             <select className="input" value={pick} onChange={(e) => setPick(e.target.value)}>
               <option value="">Pick a line…</option>
-              <optgroup label="Flats — quote these on residential">
-                {flats.map((r) => (
-                  <option key={r.id} value={r.id}>{r.name} — {money(r.price)}</option>
-                ))}
-              </optgroup>
-              <optgroup label="Labor / dispatch — commercial after the first hour">
-                {labor.map((r) => (
-                  <option key={r.id} value={r.id}>{r.name} — {money(r.price)}</option>
-                ))}
-              </optgroup>
+              {flats.map((r) => (
+                <option key={r.id} value={r.id}>{r.name} — {money(r.price)}</option>
+              ))}
             </select>
             <button type="button" className="btn min-h-11 shrink-0" onClick={addRate} disabled={!pick}>Add</button>
           </div>
@@ -112,12 +110,43 @@ export function QuoteBuilder({ rates }: { rates: Rate[] }) {
 
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
-            <span className="label">Travel zone</span>
-            <select className="input mt-1" value={zone} onChange={(e) => setZone(e.target.value as TravelZone)}>
-              {TRAVEL_ZONES.map((z) => (
-                <option key={z.zone} value={z.zone}>Zone {z.zone} — {z.fee ? money(z.fee) : 'included'}</option>
+            <span className="label">Tier</span>
+            <select className="input mt-1" value={tier} onChange={(e) => { setTier(e.target.value as Tier); setLines([]); }}>
+              <option value="residential">Residential</option>
+              <option value="commercial">Commercial</option>
+            </select>
+          </label>
+          <label className="block">
+            <span className="label">Zone (from Elkland)</span>
+            <select className="input mt-1" value={zone} onChange={(e) => setZone(Number(e.target.value) as ZoneNumber)}>
+              {([1, 2, 3] as ZoneNumber[]).map((z) => (
+                <option key={z} value={z}>Zone {z} — {money(pricing.zones[z])} · {ZONE_LABELS[z]}</option>
               ))}
             </select>
+          </label>
+          <label className="block">
+            <span className="label">Trip</span>
+            <select className="input mt-1" value={trip} onChange={(e) => setTrip(e.target.value as TripKind)}>
+              {tripKinds.map((k) => (
+                <option key={k} value={k}>
+                  {k === 'none' ? 'No trip (flats + zone fee)' : `${tripLabel(k)} — ${money(pricing[tier].trip[k])}`}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="label">Hours after the first</span>
+            <input
+              className="input mt-1"
+              type="number"
+              inputMode="decimal"
+              value={extraHours}
+              onChange={(e) => setExtraHours(e.target.value)}
+              placeholder="0"
+            />
+            <span className="mt-1 block text-xs text-[color:var(--ink-muted)]">
+              {money(pricing[tier].hourly[trip === 'none' ? 'day' : trip])}/hr
+            </span>
           </label>
           <label className="block">
             <span className="label">Diagnostic credit</span>
@@ -127,7 +156,7 @@ export function QuoteBuilder({ rates }: { rates: Rate[] }) {
               inputMode="decimal"
               value={credit}
               onChange={(e) => setCredit(e.target.value)}
-              placeholder={String(MONEY.residentialDiagnostic)}
+              placeholder={String(pricing[tier].trip.day)}
             />
           </label>
         </div>
@@ -135,8 +164,6 @@ export function QuoteBuilder({ rates }: { rates: Rate[] }) {
         <fieldset className="space-y-1.5">
           <legend className="label">Modifiers</legend>
           <Toggle checked={oldWork} onChange={setOldWork} label={`Old work +${MONEY.oldWorkSurcharge * 100}%`} hint="Known condition, flagged on the first look" />
-          <Toggle checked={afterHours} onChange={setAfterHours} label={`After hours ${MONEY.afterHoursMultiplier}×`} />
-          <Toggle checked={holiday} onChange={setHoliday} label={`Holiday ${MONEY.holidayMultiplier}×`} hint="Only if you answer" />
         </fieldset>
 
         <label className="block">
@@ -187,8 +214,8 @@ export function QuoteBuilder({ rates }: { rates: Rate[] }) {
         </p>
 
         <div className="mt-4 space-y-1.5 text-sm text-charcoal">
-          {lines.length === 0 ? (
-            <p className="italic opacity-60">Add a line from the card to start the quote.</p>
+          {lines.length === 0 && trip === 'none' ? (
+            <p className="italic opacity-60">Add a line or pick a trip to start the quote.</p>
           ) : (
             <>
               {lines.filter((l) => l.kind !== 'material').map((l) => (
@@ -197,10 +224,10 @@ export function QuoteBuilder({ rates }: { rates: Rate[] }) {
               {quote.materialsCost > 0 && (
                 <Line label={`Materials (cost ${money(quote.materialsCost)} + ${MONEY.materialsMarkup * 100}%)`} value={money(quote.materialsCharged)} />
               )}
-              {quote.travel > 0 && <Line label={`Travel Zone ${zone}`} value={money(quote.travel)} />}
+              {quote.trip > 0 && trip !== 'none' && <Line label={tripLabel(trip)} value={money(quote.trip)} sub="Includes the Zone 1 trip and the first hour" />}
+              {quote.zoneAdd > 0 && <Line label={trip === 'none' ? `Zone ${zone} trip` : `Zone ${zone} (over Zone 1)`} value={money(quote.zoneAdd)} />}
+              {quote.laborCharged > 0 && <Line label={`${quote.hours} hr at ${money(quote.hourlyRate)}`} value={money(quote.laborCharged)} />}
               {quote.oldWorkAdd > 0 && <Line label="Old work" value={money(quote.oldWorkAdd)} />}
-              {quote.afterHoursAdd > 0 && <Line label="After hours" value={money(quote.afterHoursAdd)} />}
-              {quote.holidayAdd > 0 && <Line label="Holiday" value={money(quote.holidayAdd)} />}
               {quote.diagnosticCredit > 0 && <Line label="Diagnostic credit" value={`− ${money(quote.diagnosticCredit)}`} />}
 
               <div className="mt-2 border-t-2 border-gold pt-2">

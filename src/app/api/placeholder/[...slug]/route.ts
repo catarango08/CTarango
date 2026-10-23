@@ -10,12 +10,12 @@ import { NextResponse } from 'next/server';
 
 /** Stand-in imagery stays inside the four-colour lock. */
 const TONES: Record<string, [string, string]> = {
-  charcoal: ['#222426', '#3A3E41'],
-  gold: ['#7A570F', '#B8871F'],
+  charcoal: ['#0C0C0C', '#333333'],
+  gold: ['#8A1015', '#E01E25'],
   go: ['#2C4C34', '#3F6B4A'],
-  hazard: ['#5C241E', '#8E382F'],
+  hazard: ['#5C0A0E', '#B5161C'],
   paper: ['#C4BAA3', '#EDE7DA'],
-  upload: ['#222426', '#565B5F'],
+  upload: ['#0C0C0C', '#555555'],
 };
 
 export async function GET(request: Request) {

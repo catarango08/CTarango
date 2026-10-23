@@ -1,6 +1,6 @@
+import { fallbackPricing, tierForJobType, type Pricing } from './pricing';
 import type { RecordValue } from '../schema';
 import { num } from '../calc';
-import { MONEY } from './rules';
 import { depositRequired } from './gates';
 
 /**
@@ -81,7 +81,7 @@ const PLAYBOOK: Record<string, Move> = {
     terminal: true,
   },
   'Declined': { action: 'Stop', instruction: 'Stop. Log why in the notes.', terminal: true },
-  'No-go': { action: 'Stop', instruction: 'Stop. Outside the footprint until licensed.', terminal: true },
+  'No-go': { action: 'Stop', instruction: 'Stop. Outside our service area.', terminal: true },
   'Lost': { action: 'Stop', instruction: 'Stop.', terminal: true },
 };
 
@@ -113,13 +113,10 @@ export function nextMove(job: RecordValue): Move {
   return move;
 }
 
-/** The diagnostic that applies to a job, by type. */
-export function diagnosticFor(jobType: unknown): { fee: number; note: string } {
-  const type = String(jobType ?? '');
-  if (type === 'Commercial' || type === 'Standby / Critical') {
-    return { fee: MONEY.commercialDiagnostic, note: `First hour, then $${MONEY.commercialHourly}/hr.` };
-  }
-  return { fee: MONEY.residentialDiagnostic, note: 'First hour, credited if we repair the same visit.' };
+/** The diagnostic (day trip) that applies to a job, by type. Pass live pricing when you have it. */
+export function diagnosticFor(jobType: unknown, pricing: Pricing = fallbackPricing()): { fee: number; note: string } {
+  const rates = pricing[tierForJobType(jobType)];
+  return { fee: rates.trip.day, note: `Zone 1 trip and first hour, then $${rates.hourly.day}/hr. Zones 2–3 add the difference.` };
 }
 
 export const STATUS_PLAYBOOK = PLAYBOOK;

@@ -1,6 +1,6 @@
 import { loadAll } from '@/lib/data';
 import { Card, Empty, PageHeader, Stat } from '@/components/ui';
-import { CLOSED_WORK } from '@/lib/domain/rules';
+import { PROMO } from '@/lib/domain/rules';
 import { date, daysUntil, money } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
@@ -43,12 +43,8 @@ export default async function EquipmentPage() {
         <Stat label="Contracted value" value={money(recurring, true)} hint="Per agreement year" />
       </section>
 
-      <div className="mb-5 rounded border border-[color:var(--hazard)] bg-[color:var(--hazard-bg)] p-3 text-sm">
-        {CLOSED_WORK.map((closed) => (
-          <p key={closed.work}>
-            <strong className="text-[color:var(--hazard)]">{closed.work} are not sold yet</strong> — not until {closed.until}. {closed.stillOpen}
-          </p>
-        ))}
+      <div className="mb-5 rounded border border-[color:var(--accent)] p-3 text-sm">
+        <p><strong>{PROMO.title}:</strong> {PROMO.text}</p>
       </div>
 
       {equipment.length === 0 ? (

@@ -15,6 +15,7 @@ import { forecastAccuracy, formatMinutes, planJob } from '@/lib/domain/forecast'
 import { materialTotals } from '@/lib/domain/materials';
 import { date, dateTime, money, number, time } from '@/lib/format';
 import { num, relationIds } from '@/lib/calc';
+import { loadPricing } from '@/lib/pricing';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,7 +40,7 @@ export default async function JobTicketPage({ params }: { params: Promise<{ id: 
   const move = nextMove(job);
   const closeout = closeoutStatus(job, photos);
   const deposit = depositRequired(job.amount);
-  const diagnostic = diagnosticFor(job.type);
+  const diagnostic = diagnosticFor(job.type, await loadPricing());
   const plan = planJob(job, allJobs);
   const accuracy = forecastAccuracy(job);
   const totals = materialTotals(materials);
