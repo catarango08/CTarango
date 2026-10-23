@@ -40,7 +40,11 @@ export function parseReceipt(lines: OcrLine[]): ParsedReceipt {
   // Supplier: a known name anywhere, else the first wordy line at the top.
   let supplier = { value: '', confidence: 0 };
   const known = KNOWN.find((k) => all.toLowerCase().includes(k.toLowerCase().replace("'", '')) || all.toLowerCase().includes(k.toLowerCase()));
-  if (known) supplier = { value: known === 'Lowes' ? "Lowe's" : known, confidence: 90 };
+  if (known) {
+    const line = clean.slice(0, 5).find((l) => l.text.toLowerCase().includes(known.toLowerCase()));
+    const full = line && line.text.length <= 40 ? line.text.replace(/[^A-Za-z0-9&'. -]/g, '').trim() : known;
+    supplier = { value: (known === 'Lowes' ? "Lowe's" : full).replace(/\b([A-Z])([A-Z']+)\b/g, (_m, a, b) => a + b.toLowerCase()), confidence: 90 };
+  }
   else {
     const top = clean.slice(0, 4).find((l) => /[A-Za-z]{3,}/.test(l.text) && !MONEY.test(l.text) && !/\d{3}[-) ]\d{3}/.test(l.text));
     if (top) supplier = { value: top.text.replace(/[^A-Za-z0-9&'. -]/g, '').trim(), confidence: Math.min(70, top.confidence) };
@@ -55,7 +59,9 @@ export function parseReceipt(lines: OcrLine[]): ParsedReceipt {
   };
   const subtotal = pick(/sub\s*-?\s*total/i);
   const tax = pick(/\btax\b/i);
-  const total = pick(/^(?!.*sub).*\b(total|balance due|amount due)\b/i);
+  let total = pick(/^(?!.*sub).*\b(total|balance due|amount due)\b/i);
+  // A smudged decimal ("TOTAL 136551") reads as no money at all: fall back to subtotal + tax, flagged.
+  if (total.value == null && subtotal.value != null) total = { value: r2(subtotal.value + (tax.value ?? 0)), confidence: 50 };
 
   const items: ParsedLine[] = [];
   for (const l of clean) {
@@ -65,8 +71,9 @@ export function parseReceipt(lines: OcrLine[]): ParsedReceipt {
     let rest = l.text.slice(0, m.index).trim();
     let qty = 1, unitCost = amount;
     // "2 @ 4.98", "2 x 4.98", "2 EA 4.98", or a leading quantity "3 WIRE NUT"
-    const at = rest.match(/(\d+(?:\.\d+)?)\s*(?:@|x|ea\b|EA\b)\s*\$?(\d+[.,]\d{2})\s*$/i);
-    if (at) { qty = Number(at[1]); unitCost = money(at[2]); rest = rest.slice(0, at.index).trim(); }
+    const at = rest.match(/(\d+(?:\.\d+)?)\s*(?:@|x|ea\b|EA\b)\s*\$?(\d+[.,]\d{2})\s*$/i)
+      ?? rest.match(/^(\d+(?:\.\d+)?)\s*(?:@|x)\s*\$?(\d+[.,]\d{2})\s+/i);
+    if (at) { qty = Number(at[1]); unitCost = money(at[2]); rest = at.index === 0 ? rest.slice(at[0].length).trim() : rest.slice(0, at.index).trim(); }
     else {
       const lead = rest.match(/^(\d{1,3})\s+(?=[A-Za-z])/);
       if (lead && Number(lead[1]) > 0 && Number(lead[1]) < 500) { qty = Number(lead[1]); unitCost = r2(amount / qty); rest = rest.slice(lead[0].length); }
