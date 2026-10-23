@@ -28,7 +28,7 @@ function ratio(m: Metric): number {
   return m.lowerIsBetter ? (m.actual <= m.target ? 1 : m.target / m.actual) : m.actual / m.target;
 }
 
-function MetricRow({ m }: { m: Metric }) {
+function MetricRow({ m, due }: { m: Metric; due?: string }) {
   const r = ratio(m);
   const needs = m.actual === null;
   return (
@@ -42,6 +42,7 @@ function MetricRow({ m }: { m: Metric }) {
       </div>
       {m.target !== null && !needs && <div className="mt-1.5"><Bar value={r} max={1} tone={r >= 1 ? 'go' : 'accent'} /></div>}
       {(m.needs || m.note) && <p className="mt-1 text-xs text-[color:var(--ink-muted)]">{needs ? m.needs : m.note}</p>}
+      {due && <p className="mt-1 text-xs text-[color:var(--ink-muted)]">Due {date(due)}</p>}
     </li>
   );
 }
@@ -155,10 +156,7 @@ export default async function DashboardPage() {
           <Card key={o.id} title={`${o.id} · ${o.objective}`}>
             <ul className="divide-y divide-[color:var(--line)]">
               {o.keyResults.map((kr) => (
-                <li key={kr.key}>
-                  <MetricRow m={kr} />
-                  <p className="-mt-1 pb-2 text-xs text-[color:var(--ink-muted)]">Due {date(kr.due)}</p>
-                </li>
+                <MetricRow key={kr.key} m={kr} due={kr.due} />
               ))}
             </ul>
           </Card>
