@@ -12,7 +12,8 @@ import type { RecordValue } from '../schema';
 const DAY = 86_400_000;
 
 function day(offset: number): string {
-  return new Date(Date.now() + offset * DAY).toISOString().slice(0, 10);
+  // Calendar day in the shop's zone, so "today" matches Central time.
+  return new Date(Date.now() + offset * DAY).toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
 }
 
 function at(offset: number, hour = 8, minute = 0): string {
@@ -156,7 +157,7 @@ export function buildDemoData(): Record<string, RecordValue[]> {
       workPerformed: 'Installed 60A fused disconnect within sight of the unit, new liquidtight whip, re-terminated at the dryer. Torqued to 275 in-lb and marked.',
       testResults: 'Phase A 241V, phase B 240V. Balanced at 1.2%. Megger 500V, >100 MΩ to ground.',
       recommendations: 'Shop panel is full. If he adds the second dryer he will need a sub-panel — worth quoting this winter.',
-      signedBy: 'Hal Reeder', paymentMethod: 'Net 15', quotedOn: day(-8), invoiceStatus: 'Sent', deposit: 0, payLink: '',
+      signedBy: 'Hal Reeder', paymentMethod: 'Net 15', quotedOn: day(-8), invoiceStatus: 'Sent', deposit: 0, payLink: 'https://buy.stripe.com/demo-placeholder',
       signed: true, depositIn: false, paid: false, closeoutDone: false, reviewAsked: false, magnets: true, photos: true, hiddenDamage: false,
       customer: [{ id: cust.reeder }], hourEntries: [], hoursLogged: 6.5, play: 'Run closeout',
     },
@@ -343,7 +344,7 @@ export function buildDemoData(): Record<string, RecordValue[]> {
   });
   const dryerDoc = {
     tier: 'residential', zone: 2, oldWork: false, scope: 'Fused disconnect within sight of the grain dryer, with a new liquidtight whip.',
-    options: [{ id: 'good', label: 'Disconnect + whip', summary: '', recommended: true, lines: [rb('HVAC disconnect + whip'), rb('240V appliance circuit')], trip: 'none', extraHours: 1, materialsCost: 183 }],
+    options: [{ id: 'good', label: 'Disconnect + whip', summary: '', recommended: true, lines: [rb('HVAC disconnect + whip'), rb('240V appliance circuit')], trip: 'none', extraHours: 0, materialsCost: 144.44 }],
     addOns: [{ id: 'gfci', ...rb('GFCI receptacle') }],
     discount: null,
   };
