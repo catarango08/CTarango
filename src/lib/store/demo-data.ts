@@ -315,5 +315,14 @@ export function buildDemoData(): Record<string, RecordValue[]> {
     j.materials = jobMaterials.filter((m) => (m.job as { id: string }[])?.[0]?.id === j.id).map((m) => ({ id: m.id }));
   }
 
-  return { jobs, jobPhotos, customers, hourLedger, rateBook, territory, permits, referrals, equipment, truckInventory, jobMaterials };
+  // Activity Log — the real seeded actuals from the first two days of tracking.
+  const activityLog: RecordValue[] = [
+    { id: id('activityLog'), name: 'Outreach emails (12)', date: '2026-10-20', type: 'Email', count: 12, contact: '', outcome: 'Sent', notes: 'Day one of tracking.' },
+    { id: id('activityLog'), name: 'Outreach emails delivered (3)', date: '2026-10-21', type: 'Email', count: 3, contact: '', outcome: 'Delivered', notes: '' },
+    { id: id('activityLog'), name: 'Outreach emails spam-blocked (4)', date: '2026-10-21', type: 'Email', count: 4, contact: '', outcome: 'Spam-blocked', notes: 'Sent but blocked by spam filters.' },
+    { id: id('activityLog'), name: 'Calls (2)', date: '2026-10-21', type: 'Call', count: 2, contact: '', outcome: '', notes: '' },
+    { id: id('activityLog'), name: 'Job walk', date: '2026-10-21', type: 'Visit', count: 1, contact: '', outcome: 'Job walk', notes: '' },
+  ];
+
+  return { jobs, jobPhotos, customers, hourLedger, rateBook, territory, permits, referrals, equipment, truckInventory, jobMaterials, activityLog };
 }
