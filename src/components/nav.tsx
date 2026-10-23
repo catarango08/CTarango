@@ -125,7 +125,7 @@ export function Sidebar({ storeKind }: { storeKind: 'notion' | 'demo' }) {
           </span>
         </Link>
 
-        <p className="mt-4 px-1 font-serif text-[11px] italic text-[color:var(--tagline)]">Show up. Fix it right.</p>
+        <p className="mt-4 px-1 font-serif text-[11px] italic text-[color:var(--tagline)]">We Show Up. We Do It Right. We Charge Fair.</p>
         <p className="mt-1 px-1 text-[11px] text-[color:var(--ink-muted)]">(417) 501-4752</p>
       </aside>
 

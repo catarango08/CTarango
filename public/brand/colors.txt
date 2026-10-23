@@ -1,5 +1,7 @@
-Tarango Electric color lock
-Charcoal     #222426    RGB 34 36 38      truck, type
-Aged White   #F5F1E8    RGB 245 241 232   paper, magnet
-Harvest Gold #B8871F    RGB 184 135 31    rules, accent type
-Oxide Red    #8E382F    RGB 142 56 47     tagline / hazard only
+Tarango Electric brand package v1.0 (October 2026)
+Tarango Red   #E01E25   RGB 224 30 37    accent, bolt
+Panel Black   #0C0C0C   RGB 12 12 12     type, dark fields
+Clean White   #FFFFFF
+Conduit Gray  #555555   support
+Light Gray    #F4F4F4   support
+Fonts: Anton (logo, headlines, phone), Barlow Condensed 600-800 (labels), Barlow 400-600 (body)

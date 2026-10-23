@@ -1,9 +1,17 @@
 import { num, round2 } from '../calc';
-import { MONEY, TRAVEL_ZONES, type TravelZone } from './rules';
+import { MONEY } from './rules';
+import { NO_TRIP_FLATS, fallbackPricing, zoneAddOverTrip, type Pricing, type Tier, type TripKind, type ZoneNumber } from './pricing';
 
 /**
- * Quote math off the Rate Book, applying the rate card rules in the order the
- * page states them: flats, then materials at cost + 35%, then the modifiers.
+ * Quote math off the Rate Book.
+ *
+ * - Trip (day / after-hours / emergency / holiday) includes the Zone 1 trip
+ *   and the first hour. Outer zones add the difference over Zone 1.
+ * - Extra hours bill at the tier's hourly for that trip kind.
+ * - After-hours, emergency and holiday change only the trip and the hour.
+ *   They never multiply the zone fee, flats, or materials.
+ * - Flats with no trip on the ticket carry the full zone fee.
+ * - The LOTO add-on carries no trip or zone fee.
  */
 
 export interface QuoteLine {
@@ -18,11 +26,15 @@ export interface QuoteLine {
 
 export interface QuoteInput {
   lines: QuoteLine[];
-  travelZone?: TravelZone;
+  pricing?: Pricing;
+  tier?: Tier;
+  zone?: ZoneNumber;
+  /** Trip on the ticket. 'none' = flats only, which carry the full zone fee. */
+  trip?: TripKind;
+  /** Hours past the first (included) hour. */
+  extraHours?: number;
   /** Known old condition flagged on the first look. Not hidden damage. */
   oldWork?: boolean;
-  afterHours?: boolean;
-  holiday?: boolean;
   /** Diagnostic already collected and credited against the repair. */
   creditDiagnostic?: number;
 }
@@ -31,11 +43,13 @@ export interface QuoteResult {
   flats: number;
   materialsCost: number;
   materialsCharged: number;
-  travel: number;
+  trip: number;
+  zoneAdd: number;
+  hours: number;
+  hourlyRate: number;
+  laborCharged: number;
   subtotal: number;
   oldWorkAdd: number;
-  afterHoursAdd: number;
-  holidayAdd: number;
   diagnosticCredit: number;
   total: number;
   depositDue: number;
@@ -43,14 +57,28 @@ export interface QuoteResult {
   notes: string[];
 }
 
+const TRIP_LABEL: Record<Exclude<TripKind, 'none'>, string> = {
+  day: 'Day trip / diagnostic',
+  afterHours: 'After-hours trip',
+  emergency: 'Emergency trip',
+  holiday: 'Holiday trip',
+};
+
+export function tripLabel(kind: Exclude<TripKind, 'none'>): string {
+  return TRIP_LABEL[kind];
+}
+
 export function buildQuote(input: QuoteInput): QuoteResult {
   const notes: string[] = [];
+  const pricing = input.pricing ?? fallbackPricing();
+  const tier = input.tier ?? 'residential';
+  const zone = input.zone ?? 1;
+  const tripKind = input.trip ?? 'none';
+  const rates = pricing[tier];
 
-  const flats = round2(
-    input.lines
-      .filter((l) => l.kind !== 'material')
-      .reduce((sum, l) => sum + num(l.price) * num(l.quantity, 1), 0),
-  );
+  const work = input.lines.filter((l) => l.kind !== 'material');
+  const flats = round2(work.reduce((sum, l) => sum + num(l.price) * num(l.quantity, 1), 0));
+  const tripFlats = work.filter((l) => !NO_TRIP_FLATS.includes(l.name));
 
   const materialsCost = round2(
     input.lines
@@ -60,39 +88,48 @@ export function buildQuote(input: QuoteInput): QuoteResult {
   const materialsCharged = round2(materialsCost * (1 + MONEY.materialsMarkup));
   if (materialsCost > 0) notes.push(`Materials at cost + ${MONEY.materialsMarkup * 100}%.`);
 
-  const zone = TRAVEL_ZONES.find((z) => z.zone === (input.travelZone ?? 'A'));
-  const travel = zone?.fee ?? 0;
-  if (travel > 0) notes.push(`Travel Zone ${zone?.zone}: ${zone?.label}.`);
+  let trip = 0;
+  let zoneAdd = 0;
+  let hourlyRate = 0;
+  const hours = Math.max(0, num(input.extraHours));
+  if (tripKind !== 'none') {
+    trip = rates.trip[tripKind];
+    zoneAdd = zoneAddOverTrip(pricing, zone);
+    hourlyRate = rates.hourly[tripKind];
+    notes.push(`${TRIP_LABEL[tripKind]} includes the Zone 1 trip and the first hour.`);
+    if (zoneAdd) notes.push(`Zone ${zone} adds $${zoneAdd} over Zone 1.`);
+  } else if (tripFlats.length > 0) {
+    zoneAdd = pricing.zones[zone];
+    notes.push(`Flat rates are plus the Zone ${zone} fee.`);
+  }
+  if (tripKind === 'none' && hours > 0) hourlyRate = rates.hourly.day;
+  const laborCharged = round2(hours * hourlyRate);
+  if (laborCharged) notes.push(`${hours} more hour${hours === 1 ? '' : 's'} at $${hourlyRate}/hr.`);
 
-  const subtotal = round2(flats + materialsCharged + travel);
+  const subtotal = round2(flats + materialsCharged + trip + zoneAdd + laborCharged);
 
-  // Modifiers stack on the work, not on travel.
-  const base = round2(flats + materialsCharged);
-  const oldWorkAdd = input.oldWork ? round2(base * MONEY.oldWorkSurcharge) : 0;
-  if (oldWorkAdd) notes.push('Old work +25% — a known condition, flagged on the first look.');
-
-  const afterHoursAdd = input.afterHours ? round2(base * (MONEY.afterHoursMultiplier - 1)) : 0;
-  if (afterHoursAdd) notes.push('After hours 1.5×.');
-
-  const holidayAdd = input.holiday ? round2(base * (MONEY.holidayMultiplier - 1)) : 0;
-  if (holidayAdd) notes.push('Holiday 2× — only because the call was answered.');
+  // Old work stacks on the work, not on the trip or zone.
+  const oldWorkAdd = input.oldWork ? round2((flats + materialsCharged + laborCharged) * MONEY.oldWorkSurcharge) : 0;
+  if (oldWorkAdd) notes.push(`Old work +${MONEY.oldWorkSurcharge * 100}%: a known condition, flagged on the first look.`);
 
   const diagnosticCredit = round2(num(input.creditDiagnostic));
-  if (diagnosticCredit) notes.push(`Diagnostic $${diagnosticCredit} credited — repaired the same visit.`);
+  if (diagnosticCredit) notes.push(`Diagnostic $${diagnosticCredit} credited: repaired the same visit.`);
 
-  const total = round2(Math.max(0, subtotal + oldWorkAdd + afterHoursAdd + holidayAdd - diagnosticCredit));
+  const total = round2(Math.max(0, subtotal + oldWorkAdd - diagnosticCredit));
   const depositDue = total > MONEY.depositThreshold ? round2(total * MONEY.depositRate) : 0;
-  if (depositDue) notes.push(`Deposit $${depositDue.toLocaleString()} (50%) before the work starts.`);
+  if (depositDue) notes.push(`Deposit $${depositDue.toLocaleString()} (${MONEY.depositRate * 100}%) before the work starts.`);
 
   return {
     flats,
     materialsCost,
     materialsCharged,
-    travel,
+    trip,
+    zoneAdd,
+    hours,
+    hourlyRate,
+    laborCharged,
     subtotal,
     oldWorkAdd,
-    afterHoursAdd,
-    holidayAdd,
     diagnosticCredit,
     total,
     depositDue,

@@ -1,12 +1,15 @@
 import { loadAll } from '@/lib/data';
 import { PageHeader, Card } from '@/components/ui';
 import { NewCallForm } from './new-call-form';
-import { BUSINESS, MONEY } from '@/lib/domain/rules';
+import { BUSINESS } from '@/lib/domain/rules';
+import { loadPricing } from '@/lib/pricing';
 
 export const dynamic = 'force-dynamic';
 
 export default async function NewCallPage() {
-  const [territory, customers] = await Promise.all([loadAll('territory'), loadAll('customers')]);
+  const [territory, customers, pricing] = await Promise.all([loadAll('territory'), loadAll('customers'), loadPricing()]);
+  const r = pricing.residential;
+  const c = pricing.commercial;
 
   return (
     <>
@@ -17,6 +20,7 @@ export default async function NewCallPage() {
 
       <div className="grid gap-4 xl:grid-cols-[1fr_320px]">
         <NewCallForm
+          diagnostics={{ residential: r.trip.day, commercial: c.trip.day }}
           territory={territory.map((t) => ({
             id: t.id,
             name: String(t.name ?? ''),
@@ -46,18 +50,19 @@ export default async function NewCallPage() {
           <Card title="What it costs them">
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between gap-3">
-                <dt>Residential diagnostic</dt>
-                <dd className="tabular-nums font-semibold">${MONEY.residentialDiagnostic}</dd>
+                <dt>Day trip / diagnostic</dt>
+                <dd className="tabular-nums font-semibold">${r.trip.day}</dd>
               </div>
               <p className="text-xs text-[color:var(--ink-muted)]">
-                First hour, credited if we repair the same visit.
+                Zone 1 trip and the first hour, then ${r.hourly.day}/hr. Zone 2 adds $
+                {pricing.zones[2] - pricing.zones[1]}, Zone 3 adds ${pricing.zones[3] - pricing.zones[1]}.
               </p>
               <div className="flex justify-between gap-3 border-t border-[color:var(--line)] pt-2">
                 <dt>Commercial diagnostic</dt>
-                <dd className="tabular-nums font-semibold">${MONEY.commercialDiagnostic}</dd>
+                <dd className="tabular-nums font-semibold">${c.trip.day}</dd>
               </div>
               <p className="text-xs text-[color:var(--ink-muted)]">
-                First hour, then ${MONEY.commercialHourly}/hr.
+                Zone 1 trip and the first hour, then ${c.hourly.day}/hr.
               </p>
             </dl>
             <p className="mt-3 border-t border-[color:var(--line)] pt-2 text-xs text-[color:var(--ink-muted)]">
@@ -72,8 +77,7 @@ export default async function NewCallPage() {
               promise to call when things change.
             </p>
             <p className="mt-2 font-serif text-sm italic text-[color:var(--ink-muted)]">
-              “I can’t take work in {'{town}'} yet. I stay in {BUSINESS.advertisedTowns.join(', ')} and
-              the county roads around them.”
+              “{'{town}'} is outside our service area. I cover {BUSINESS.serviceArea}.”
             </p>
           </Card>
         </div>

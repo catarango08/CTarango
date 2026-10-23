@@ -2,7 +2,7 @@
   "name": "tarango-electric-field-desk",
   "version": "0.1.0",
   "private": true,
-  "description": "Field desk for Tarango Electric — Bolivar, Missouri. Runs on the Tarango Electric OS in Notion.",
+  "description": "Field desk for Tarango Electric, based in Elkland, Missouri. Serves Bolivar, Buffalo, Marshfield, Fair Grove, Elkland, and Dallas, Polk, Webster and Greene counties. Runs on the Tarango Electric OS in Notion.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

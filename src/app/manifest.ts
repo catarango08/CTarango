@@ -8,12 +8,12 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'Tarango Electric — field desk',
     short_name: 'Tarango',
-    description: 'New call, advance the ticket, closeout. Show up. Fix it right.',
+    description: 'New call, advance the ticket, closeout. We Show Up. We Do It Right. We Charge Fair.',
     start_url: '/',
     display: 'standalone',
     orientation: 'any',
-    background_color: '#222426',
-    theme_color: '#222426',
+    background_color: '#0C0C0C',
+    theme_color: '#0C0C0C',
     icons: [
       { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
       { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
