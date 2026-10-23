@@ -36,6 +36,14 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
         <Link className="btn shrink-0" href={`/jobs/${id}/onsite`}>← Job</Link>
       </div>
       <QuoteBuilder jobId={id} initial={doc} pricing={pricing} rates={flats} customer={String(cust?.name ?? '')} diagnostic={diag.fee} foundDefault={String(job.diagnosis ?? job.siteConditions ?? '')} latestQuoteId={quotes[0]?.id} />
+      <details className="panel mt-6 p-4">
+        <summary className="min-h-12 cursor-pointer text-sm font-semibold uppercase tracking-wider">Corey only · objections</summary>
+        <ul className="mt-2 space-y-2 text-sm">
+          <li><b>“I need to talk to my spouse.”</b> Offer to call them now on speaker. If not, tap Not today → Spouse; a 48-hour follow-up is set.</li>
+          <li><b>“That’s too high.”</b> Step down to Good. Never discount the same scope.</li>
+          <li><b>“I’m getting other quotes.”</b> “Fair. This price holds 14 days.”</li>
+        </ul>
+      </details>
       <section className="panel mt-6 p-4">
         <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider">Versions</h2>
         {quotes.length === 0 ? <p className="text-sm text-[color:var(--ink-muted)]">No versions saved yet.</p> : (
