@@ -25,7 +25,7 @@ export interface Metric {
 }
 
 export interface KeyResult extends Metric { due: string }
-export interface Okr { id: string; objective: string; keyResults: KeyResult[] }
+export interface Okr { id: string; objective: string; primary: boolean; keyResults: KeyResult[] }
 
 export interface GoalsReport {
   asOf: string;
@@ -151,8 +151,6 @@ export function buildGoals(input: {
   const mDrive = mJobs.reduce((s, j) => s + num(j.driveHours), 0);
   const mHours = mInstall + mDrive;
   const mLeads = leadsIn(monthStart, monthEnd);
-  const mQualified = mLeads.filter((j) => !NOT_QUALIFIED.has(String(j.status)));
-  const mBooked = mLeads.filter((j) => BOOKED_OR_LATER.has(String(j.status)));
   const quoted = input.jobs.filter((j) => String(j.status) === 'Quoted');
   const activePartners = input.referrals.filter((r) => String(r.status) === 'Active');
   const referralLeads = input.jobs.filter((j) => /referral/i.test(String(j.source ?? '')));
@@ -174,14 +172,10 @@ export function buildGoals(input: {
   const monthly: Metric[] = [
     { key: 'mRevenue', label: 'Revenue', target: null, unit: 'money', actual: mRevenue, note: 'Jobs.Amount on Invoiced, Closed or Paid jobs.' },
     { key: 'mJobs', label: 'Jobs completed', target: 16, unit: 'count', actual: mJobs.length },
-    { key: 'ticket', label: 'Average ticket', target: GOALS.monthly.averageTicket, unit: 'money', actual: mJobs.length ? mRevenue / mJobs.length : null, needs: mJobs.length ? undefined : 'No completed jobs this month yet.' },
     { key: 'hourly', label: 'Effective $/hr after travel', target: GOALS.monthly.effectiveHourly, unit: 'money', actual: mHours ? mRevenue / mHours : null,
       needs: mHours ? undefined : 'No self-performed Hour Ledger hours this month yet.', note: 'Revenue ÷ (Hour Ledger install hours + Jobs drive hours).' },
-    { key: 'conversion', label: 'Lead-to-booked conversion', target: GOALS.monthly.leadToBooked, unit: 'percent', actual: mLeads.length ? mBooked.length / mLeads.length : null,
-      needs: mLeads.length ? undefined : 'No leads called in this month yet.' },
     { key: 'quotesOut', label: 'Quotes outstanding', target: null, unit: 'count', actual: quoted.length, note: `${quoted.length} quoted, worth $${revenueOf(quoted).toLocaleString()}.` },
     { key: 'quotesValue', label: 'Quotes outstanding, value', target: null, unit: 'money', actual: revenueOf(quoted) },
-    { key: 'turnaround', label: 'Quote turnaround', target: GOALS.monthly.quoteTurnaroundHours, unit: 'hours', lowerIsBetter: true, actual: null, needs: NEEDS.quotedDate },
     { key: 'partners', label: 'Active referral partners', target: 5, unit: 'count', actual: activePartners.length, note: 'Referrals with Status Active.' },
     { key: 'perPartner', label: 'Leads per partner', target: 1, unit: 'count', actual: activePartners.length ? referralLeads.length / activePartners.length : null,
       needs: activePartners.length ? undefined : 'No active referral partners yet.', note: `${referralLeads.length} referral-sourced jobs, all time. ${NEEDS.partnerLink}` },
@@ -214,29 +208,26 @@ export function buildGoals(input: {
   const genQuotes = input.jobs.filter((j) => gen(j) && ['Quoted', ...WON].includes(String(j.status)));
   const dealer = input.referrals.find((r) => GOALS.dealerPattern.test(String(r.name ?? '')));
   const reviewsReceived = activityCount(input.activity, ['Review Received'], new Date(2000, 0, 1), new Date(2100, 0, 1));
-  const decRevenue = revenueOf(completedIn(new Date(2026, 11, 1), new Date(2027, 0, 1)));
 
   const actualFor: Record<string, Pick<Metric, 'actual' | 'needs' | 'note'>> = {
     'o1-profit': { actual: bestProfit, note: 'Best month so far. ' + NEEDS.overhead },
     'o1-jobs': { actual: mJobs.length, note: 'This month.' },
     'o1-estimates': { actual: null, needs: NEEDS.quotedDate },
-    'o1-dec-revenue': { actual: decRevenue, note: now < new Date(2026, 11, 1) ? 'December has not started. This month so far: $' + mRevenue.toLocaleString() + '.' : undefined },
     'o2-partners': { actual: null, needs: NEEDS.partnerLink, note: `${activePartners.length} partners are Active in Referrals.` },
     'o2-reviews': { actual: reviewsReceived, note: 'Activity Log → Review Received.' },
-    'o2-leads': { actual: mQualified.length, note: 'Leads called in this month, minus No-go.' },
-    'o3-hookups': { actual: genBooked.length, note: 'Jobs mentioning generator / interlock / transfer switch, booked or later.' },
-    'o3-quotes': { actual: genQuotes.length, note: 'Generator jobs at Quoted or later.' },
-    'o3-dealer': { actual: dealer && String(dealer.status) === 'Active' ? 1 : 0, note: dealer ? `Lockwood is "${dealer.status}" in Referrals.` : 'Lockwood is not in Referrals yet.' },
-    'o4-hourly': { actual: monthly.find((m) => m.key === 'hourly')!.actual, needs: monthly.find((m) => m.key === 'hourly')!.needs },
-    'o4-turnaround': { actual: null, needs: NEEDS.quotedDate },
+    'o2-gen-quotes': { actual: genQuotes.length, note: 'Generator jobs at Quoted or later.' },
+    'o3-fulltime': { actual: streak, note: 'Current streak of $4,500+ profit months. ' + NEEDS.overhead },
+    'gp-hookups': { actual: genBooked.length, note: 'Jobs mentioning generator / interlock / transfer switch, booked or later, by Nov 22.' },
+    'gp-dealer': { actual: dealer && String(dealer.status) === 'Active' ? 1 : 0, note: dealer ? `Lockwood is "${dealer.status}" in Referrals.` : 'Lockwood is not in Referrals yet.' },
+    'ef-hourly': { actual: monthly.find((m) => m.key === 'hourly')!.actual, needs: monthly.find((m) => m.key === 'hourly')!.needs },
   };
 
   const okrs: Okr[] = GOALS.okrs.map((o) => ({
     id: o.id,
     objective: o.objective,
+    primary: o.primary,
     keyResults: o.keyResults.map((kr) => ({
       key: kr.id, label: kr.label, target: kr.target, unit: kr.unit as KrUnit, due: kr.due,
-      lowerIsBetter: kr.id === 'o4-turnaround',
       ...actualFor[kr.id],
     })),
   }));

@@ -152,8 +152,21 @@ export default async function DashboardPage() {
 
       <h2 className="display mb-3 mt-8 text-xl">OKRs</h2>
       <div className="grid gap-5 md:grid-cols-2">
-        {g.okrs.map((o) => (
+        {g.okrs.filter((o) => o.primary).map((o) => (
           <Card key={o.id} title={`${o.id} · ${o.objective}`}>
+            <ul className="divide-y divide-[color:var(--line)]">
+              {o.keyResults.map((kr) => (
+                <MetricRow key={kr.key} m={kr} due={kr.due} />
+              ))}
+            </ul>
+          </Card>
+        ))}
+      </div>
+
+      <h2 className="display mb-3 mt-8 text-lg text-[color:var(--ink-muted)]">Also tracking</h2>
+      <div className="grid gap-5 md:grid-cols-2">
+        {g.okrs.filter((o) => !o.primary).map((o) => (
+          <Card key={o.id} title={o.objective}>
             <ul className="divide-y divide-[color:var(--line)]">
               {o.keyResults.map((kr) => (
                 <MetricRow key={kr.key} m={kr} due={kr.due} />
