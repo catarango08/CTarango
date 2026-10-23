@@ -43,7 +43,13 @@ export const JOB_TYPES = ['Residential', 'Commercial', 'Farm / Shop', 'Standby /
 export const LEAD_SOURCES = ['Phone', 'Google', 'HVAC referral', 'Repeat', 'Magnet', 'Facebook', 'Walk-in'] as const;
 
 /** Jobs → Town. Only towns the business already serves, plus the stop value. */
-export const JOB_TOWNS = ['Bolivar', 'Marshfield', 'Buffalo', 'Dallas Co', 'Webster Co', 'Polk Co', 'Other — STOP'] as const;
+/** Mirrors the live Notion Jobs → Town options (Oct 22, 2026). Never Springfield, Ozark, Nixa or Lebanon. */
+export const JOB_TOWNS = [
+  'Elkland', 'Buffalo', 'Fair Grove', 'Long Lane', 'Conway', 'Halfway', 'Pleasant Hope', 'Marshfield',
+  'Strafford', 'Brighton', 'Niangua', 'Louisburg', 'Phillipsburg', 'Morrisville', 'Bolivar', 'Fordland',
+  'Seymour', 'Lebanon east / Bennett Spring', 'Dallas Co', 'Polk Co', 'Webster Co', 'Greene Co',
+  'Laclede Co', 'Christian Co', 'Other — STOP',
+] as const;
 
 export const PERMIT_STATES = ['None', 'Needed', 'Pulled', 'Inspected'] as const;
 

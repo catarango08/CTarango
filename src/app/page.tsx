@@ -159,7 +159,7 @@ export default async function TodayPage() {
             ))}
           </ul>
           <p className="mt-3 border-t border-[color:var(--line)] pt-2 text-xs text-[color:var(--ink-muted)]">
-            Open: {BUSINESS.advertisedTowns.join(', ')}, unincorporated Dallas / Webster / Polk. {BUSINESS.codeBasis}.
+            Service area: {BUSINESS.serviceArea}. Never Springfield. {BUSINESS.codeBasis}.
           </p>
         </Card>
       </div>

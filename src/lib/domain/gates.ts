@@ -25,12 +25,22 @@ export interface TownVerdict {
  *
  * An unmatched town is deliberately treated as NO-GO rather than GO: the OS
  * says "Red or unknown → Status No-go", so the failure mode is a polite
- * decline, never an accidental quote outside the licensed footprint.
+ * decline, never an accidental quote outside the service area.
+ * Anything starting with "Springfield" is rejected before the lookup.
  */
 export function gateTown(townInput: string, territory: RecordValue[]): TownVerdict {
   const town = townInput.trim();
   if (!town) {
     return { gate: 'UNKNOWN', town, instruction: 'Ask the town before anything else.', blockQuote: true };
+  }
+
+  if (/^springfield/i.test(town)) {
+    return {
+      gate: 'NO-GO',
+      town,
+      instruction: 'Springfield is outside our service area. Be polite. Do not quote.',
+      blockQuote: true,
+    };
   }
 
   const match = findTown(town, territory);

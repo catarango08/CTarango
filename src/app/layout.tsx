@@ -6,7 +6,7 @@ import { getStore } from '@/lib/store';
 
 export const metadata: Metadata = {
   title: 'Tarango Electric — field desk',
-  description: 'Service, panels, standby, farm and shop. Bolivar, Buffalo, Marshfield.',
+  description: 'Electrical service, panels and generator hookups from Elkland. Bolivar, Buffalo, Marshfield, Fair Grove, Elkland, and Dallas, Polk, Webster and Greene counties.',
   applicationName: 'Tarango',
   appleWebApp: {
     capable: true,

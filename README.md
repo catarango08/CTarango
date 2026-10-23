@@ -21,7 +21,7 @@ Three rules of the business are enforced by the software rather than by memory:
 | --- | --- |
 | **Town gate** | Every call is checked against Service Territory before anything else. Green books a diagnostic, amber opens at Qualify with "call the AHJ", red and *unrecognised* both refuse to quote. An unknown town fails closed, not open. |
 | **Closeout gate** | A job cannot reach Closed until hours, photos, signature, payment or Net 15, review ask and magnets are all done. The server enforces it, so it cannot be clicked past. |
-| **Copy guard** | Customer-facing text is checked against the brand kit's do-not-print list — "licensed", "24/7", "emergencies", Springfield as a service area. |
+| **Copy guard** | Customer-facing text is checked against the brand kit's do-not-print list — "licensed", "insured", "24/7", "emergencies", Springfield as a service area. |
 
 ## The screens
 

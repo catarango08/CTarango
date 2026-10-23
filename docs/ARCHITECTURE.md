@@ -63,7 +63,7 @@ in `/api/jobs/:id/close`, not in the button — so it cannot be clicked past.
 
 **An unknown town is NO-GO, not GO.** `gateTown()` returns `blockQuote: true` for a town it
 cannot match, because the OS says "Red or unknown → Status No-go". The failure mode is a polite
-decline, never an accidental quote outside the footprint.
+decline, never an accidental quote outside the service area.
 
 **Drive hours never reach the ledger.** `logHoursToLedger()` writes install hours only, and
 subtracts what is already logged so closing a job twice cannot inflate the license file.

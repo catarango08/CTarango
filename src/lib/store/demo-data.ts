@@ -88,7 +88,7 @@ const TOWNS: [string, string, string, string, string, string][] = [
   ['Webster County unincorporated', 'GO', 'County unincorporated', 'Yes', 'Green', 'Core GO.'],
   ['Polk County unincorporated', 'GO', 'County unincorporated', 'Yes', 'Green', 'Not Springfield / Greene. Confirm any county permit.'],
   ['Springfield', 'NO-GO', 'City', 'Decline', 'Red', 'City electrician trade certification + contractor license.'],
-  ['Branson', 'NO-GO', 'City', 'Decline', 'Red', 'Closed until licensed.'],
+  ['Branson', 'NO-GO', 'City', 'Decline', 'Red', 'Outside our service area.'],
   ['Joplin', 'NO-GO', 'City', 'Decline', 'Red', 'City electrical license / ICC exam path.'],
   ['Kansas City MO', 'NO-GO', 'Metro / suburb', 'Decline', 'Red', 'KCMO electrical contractor + certificate of qualification.'],
   ["Lee's Summit", 'NO-GO', 'Metro / suburb', 'Decline', 'Red', 'Class D electrical contractor.'],
@@ -116,7 +116,7 @@ export function buildDemoData(): Record<string, RecordValue[]> {
     { id: cust.mcafee, name: 'Janice McAfee', phone: '417-555-0119', address: '318 E Jackson St', town: 'Bolivar', kind: 'Homeowner', stage: 'New', foundUs: 'Magnet', notes: 'Kitchen receptacles dead on one wall.', jobs: [], jobCount: 1 },
     { id: cust.pinegrove, name: 'Pine Grove Care Center', phone: '417-555-0233', email: 'maint@pinegrove.example', address: '900 N Oakland Ave', town: 'Bolivar', kind: 'Commercial', stage: 'Active', foundUs: 'Walk-in', notes: 'Generator and ATS under a Keep Power Standard. Monthly exercise on record.', jobs: [], jobCount: 2 },
     { id: cust.tarango, name: 'Corey Tarango', phone: '417-501-4752', town: 'Dallas Co', kind: 'Homeowner', stage: 'New', foundUs: 'Phone', notes: 'Own property. Test tickets.', jobs: [], jobCount: 1 },
-    { id: cust.dawson, name: 'Rhonda Dawson', phone: '417-555-0321', address: '77 W Commercial St', town: 'Springfield', kind: 'Homeowner', stage: 'Do not serve', foundUs: 'Google', notes: 'Springfield. Declined politely — outside the footprint until licensed.', jobs: [], jobCount: 1 },
+    { id: cust.dawson, name: 'Rhonda Dawson', phone: '417-555-0321', address: '77 W Commercial St', town: 'Springfield', kind: 'Homeowner', stage: 'Do not serve', foundUs: 'Google', notes: 'Springfield. Declined politely: outside our service area.', jobs: [], jobCount: 1 },
   ];
 
   const job = {

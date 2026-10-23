@@ -83,7 +83,7 @@ Clear space is the height of the E in ELECTRIC. Keep one gold rule per compositi
 The kit's list, enforced in code by `checkCopy()` in `src/lib/domain/rules.ts` and surfaced
 wherever customer-facing text is typed:
 
-- **"licensed"** — not true yet
+- **"licensed"** and **"insured"** — never print either (no liability policy is bound)
 - **"24/7"** and **"emergencies"** — do not promise a response you cannot staff
 - **"Built Ready"**, any **"EST. <year>"** founding myth
 - **"Serving all of Southwest Missouri"** — name the three towns instead
