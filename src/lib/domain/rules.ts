@@ -90,6 +90,7 @@ const FORBIDDEN: { pattern: RegExp; phrase: string; reason: string }[] = [
   { pattern: /\bsouth\s?west missouri\b/i, phrase: 'Southwest Missouri', reason: 'Too broad. Name the towns and counties instead.' },
   { pattern: /\bnew construction\b/i, phrase: 'new construction', reason: 'The company services existing buildings.' },
   { pattern: /\bemergenc(y|ies)\b/i, phrase: 'emergencies', reason: 'Implies a 24/7 promise.' },
+  { pattern: /\bnon[- ]?refundable\b/i, phrase: 'non-refundable', reason: 'Deposit policy refunds everything but ordered materials. Never print it.' },
   { pattern: /\bspringfield\b/i, phrase: 'Springfield', reason: 'Not in the service area. Never print it.' },
   { pattern: /\b(joplin|branson)\b/i, phrase: 'Joplin / Branson', reason: 'NO-GO towns. Keep them out of service-area copy.' },
 ];

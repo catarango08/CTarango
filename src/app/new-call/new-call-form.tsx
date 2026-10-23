@@ -90,7 +90,7 @@ export function NewCallForm({
       });
       const body = (await res.json().catch(() => ({}))) as { record?: { id: string }; error?: string };
       if (!res.ok) throw new Error(body.error ?? 'Could not start the card');
-      router.push(body.record?.id ? `/jobs/${body.record.id}` : '/jobs');
+      router.push(body.record?.id ? `/jobs/${body.record.id}/onsite` : '/jobs');
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not start the card');
@@ -151,7 +151,7 @@ export function NewCallForm({
       const jobBody = (await jobRes.json().catch(() => ({}))) as { record?: { id: string }; error?: string };
       if (!jobRes.ok) throw new Error(jobBody.error ?? 'Could not save the ticket');
 
-      router.push(jobBody.record?.id ? `/jobs/${jobBody.record.id}` : '/jobs');
+      router.push(jobBody.record?.id ? `/jobs/${jobBody.record.id}/onsite` : '/jobs');
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save');

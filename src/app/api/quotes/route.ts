@@ -1,3 +1,4 @@
+import { isChangeOrder } from '@/lib/domain/change-order';
 import { NextResponse } from 'next/server';
 import { getStore } from '@/lib/store';
 import { relationIds } from '@/lib/calc';
@@ -20,7 +21,7 @@ export async function POST(request: Request) {
   const job = await store.get('jobs', body.jobId);
   if (!job) return NextResponse.json({ error: 'Job not found' }, { status: 404 });
 
-  const existing = (await store.list('quotes')).filter((q) => relationIds(q.job).includes(body.jobId!));
+  const existing = (await store.list('quotes')).filter((q) => relationIds(q.job).includes(body.jobId!) && !isChangeOrder(q));
   const version = existing.reduce((m, q) => Math.max(m, Number(q.version) || 0), 0) + 1;
   const pricing = await loadPricing();
   const rec = doc.options.find((o) => o.recommended) ?? doc.options[0];

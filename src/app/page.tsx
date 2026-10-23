@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ContactButtons } from '@/components/contact-buttons';
 import { hydrate, loadToday } from '@/lib/data';
 import { Card, Empty, PageHeader, Stat, StatusPill } from '@/components/ui';
 import { Tagline } from '@/components/brand';
@@ -37,8 +38,23 @@ export default async function TodayPage() {
         }
       />
 
-      <MorningDigest />
-      <HomeClose />
+      {onDeck[0] && (
+        <section className="panel mb-5 p-4">
+          <p className="label">Next job · {String(onDeck[0].status ?? '')}</p>
+          <h2 className="mt-1 break-words text-xl font-semibold leading-tight">{String(onDeck[0].name)}</h2>
+          <p className="mt-1 text-base">{[onDeck[0].window, onDeck[0].town].filter(Boolean).map(String).join(' · ')}</p>
+          <div className="mt-3"><ContactButtons phone={String(onDeck[0].phone ?? '')} address={String(onDeck[0].address ?? onDeck[0].town ?? '')} /></div>
+          <Link href={`/jobs/${onDeck[0].id}/onsite`} className="btn-primary mt-3 min-h-14 w-full text-lg">{onDeck[0].arrived ? 'Open job' : 'Start · Arrived'} →</Link>
+        </section>
+      )}
+      <div className="mb-5 grid grid-cols-2 gap-2 lg:hidden">
+        <Link href="/new-call" className="btn min-h-14 justify-center text-base">+ New lead</Link>
+        <Link href="/customers/new" className="btn min-h-14 justify-center text-base">+ Customer</Link>
+      </div>
+      <div className="hidden lg:block">
+        <MorningDigest />
+        <HomeClose />
+      </div>
 
       {today.alerts.length > 0 && (
         <section className="mb-6 space-y-2">
@@ -79,7 +95,7 @@ export default async function TodayPage() {
                 return (
                   <li key={job.id} className="py-3">
                     <div className="flex flex-wrap items-start justify-between gap-2">
-                      <Link href={`/jobs/${job.id}`} className="text-sm font-semibold hover:text-[color:var(--accent-ink)]">
+                      <Link href={`/jobs/${job.id}/onsite`} className="flex min-h-11 items-center text-base font-semibold hover:text-[color:var(--accent-ink)]">
                         {String(job.name)}
                       </Link>
                       <span className="flex items-center gap-2">
@@ -142,7 +158,7 @@ export default async function TodayPage() {
             <ul className="divide-y divide-[color:var(--line)]">
               {hanging.map((job) => (
                 <li key={job.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5">
-                  <Link href={`/jobs/${job.id}`} className="min-w-0 flex-1 truncate text-sm font-medium hover:text-[color:var(--accent-ink)]">
+                  <Link href={`/jobs/${job.id}/onsite`} className="flex min-h-11 min-w-0 flex-1 items-center truncate text-sm font-medium hover:text-[color:var(--accent-ink)]">
                     {String(job.name)}
                   </Link>
                   <StatusPill value={job.status} />
@@ -174,7 +190,7 @@ export default async function TodayPage() {
           <ul className="divide-y divide-[color:var(--line)]">
             {needsCloseout.map((job) => (
               <li key={job.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5">
-                <Link href={`/jobs/${job.id}`} className="min-w-0 flex-1 truncate text-sm font-medium hover:text-[color:var(--accent-ink)]">
+                <Link href={`/jobs/${job.id}/onsite`} className="flex min-h-11 min-w-0 flex-1 items-center truncate text-sm font-medium hover:text-[color:var(--accent-ink)]">
                   {String(job.name)}
                 </Link>
                 <span className="text-xs text-[color:var(--ink-muted)]">on site {date(job.onSite)}</span>

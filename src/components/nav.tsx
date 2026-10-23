@@ -6,6 +6,10 @@ import clsx from 'clsx';
 import { useState } from 'react';
 import { Monogram } from './brand';
 import { ThemeToggle } from './theme-toggle';
+import { SyncBadge } from './sync-badge';
+
+/** What the phone drawer shows up front. Everything else sits behind More. */
+const MOBILE_PRIMARY = new Set(['/', '/new-call', '/jobs', '/customers', '/photos', '/truck', '/hours', '/rates']);
 
 const SECTIONS: { heading: string; items: { href: string; label: string }[] }[] = [
   {
@@ -13,7 +17,7 @@ const SECTIONS: { heading: string; items: { href: string; label: string }[] }[] 
     items: [
       { href: '/', label: 'Today' },
       { href: '/dashboard', label: 'Goals' },
-      { href: '/new-call', label: 'New call' },
+      { href: '/new-call', label: 'New lead' },
       { href: '/jobs', label: 'Jobs' },
       { href: '/pipeline', label: 'Pipeline' },
       { href: '/photos', label: 'Photos' },
@@ -50,6 +54,7 @@ const SECTIONS: { heading: string; items: { href: string; label: string }[] }[] 
 export function Sidebar({ storeKind }: { storeKind: 'notion' | 'demo' }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [more, setMore] = useState(false);
 
   return (
     <>
@@ -59,7 +64,7 @@ export function Sidebar({ storeKind }: { storeKind: 'notion' | 'demo' }) {
           <Monogram className="h-7 w-7 rounded" />
           <span className="display text-sm">Tarango Electric</span>
         </Link>
-        <span className="ml-auto"><ThemeToggle /></span>
+        <span className="ml-auto"><SyncBadge /></span>
       </div>
 
       <aside
@@ -87,7 +92,7 @@ export function Sidebar({ storeKind }: { storeKind: 'notion' | 'demo' }) {
                 {section.items.map((item) => {
                   const active = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
                   return (
-                    <li key={item.href}>
+                    <li key={item.href} className={more || MOBILE_PRIMARY.has(item.href) ? '' : 'hidden lg:block'}>
                       <Link
                         href={item.href}
                         onClick={() => setOpen(false)}
@@ -108,7 +113,10 @@ export function Sidebar({ storeKind }: { storeKind: 'notion' | 'demo' }) {
           ))}
         </nav>
 
-        <div className="mt-6 hidden lg:block"><ThemeToggle /></div>
+        <button type="button" className="btn mt-4 w-full justify-center lg:hidden" onClick={() => setMore((v) => !v)}>
+          {more ? 'Less' : 'More (goals, map, pipeline, setup…)'}
+        </button>
+        <div className="mt-4"><ThemeToggle /></div>
 
         <Link
           href="/setup"
