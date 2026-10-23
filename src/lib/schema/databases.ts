@@ -1,5 +1,6 @@
 import type { DbDef } from './types';
 import { activityLog } from './activity-log';
+import { dailyDigest } from './daily-digest';
 
 /**
  * The Tarango Electric OS, as it actually exists in Notion.
@@ -363,5 +364,5 @@ const jobMaterials: DbDef = {
 
 export const DATABASES = [
   jobs, jobPhotos, customers, hourLedger, rateBook, territory, permits, referrals, equipment,
-  truckInventory, jobMaterials, activityLog,
+  truckInventory, jobMaterials, activityLog, dailyDigest,
 ] as const;

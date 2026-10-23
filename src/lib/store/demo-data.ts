@@ -324,5 +324,19 @@ export function buildDemoData(): Record<string, RecordValue[]> {
     { id: id('activityLog'), name: 'Job walk', date: '2026-10-21', type: 'Visit', count: 1, contact: '', outcome: 'Job walk', notes: '' },
   ];
 
-  return { jobs, jobPhotos, customers, hourLedger, rateBook, territory, permits, referrals, equipment, truckInventory, jobMaterials, activityLog };
+  const dailyDigest: RecordValue[] = [
+    {
+      id: id('dailyDigest'), headline: 'Call Lockwood Refrigeration about being their go-to generator install electrician before the Oct 26 push.', date: '2026-10-22',
+      priorities: '• Call Lockwood (dealer call script)\n• Willard feeder lead: get the address and photos\n• Call Nick Seiner (SWEC) to thank him',
+      thisWeek: '• Generator push, first post Oct 26\n• Fri: publish check on the Local Partners page\n• Oct 24+: resume email outreach at 3–5 a day',
+      waitingOn: '• SWEC adding you to its contractor list\n• Scott Cook: contractor page and link',
+      numbers: '',
+      weather: 'Elkland: sunny, high 77°F / low 52°F, 0% rain. Do attic work in the evening window.',
+      bizDev: '• Lockwood: offer a flat per-install price sheet\n• Phone two builders whose emails bounced',
+      tip: 'Text customers a photo-request checklist before every quote visit.',
+      notes: 'Calendar open all day.', pdfPath: '',
+    },
+  ];
+
+  return { jobs, jobPhotos, customers, hourLedger, rateBook, territory, permits, referrals, equipment, truckInventory, jobMaterials, activityLog, dailyDigest };
 }
