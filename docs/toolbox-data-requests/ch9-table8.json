@@ -1,0 +1,38 @@
+{
+  "table": "ch9-table8",
+  "tool": "Voltage drop",
+  "targetFile": "src/lib/toolbox/data/ch9-table8.ts",
+  "export": "CH9_TABLE8",
+  "instructions": "Conductor resistance, ohms per 1000 ft, every size in table order (smallest first). Say which column (coated/uncoated Cu) and whether you used Table 8 or Table 9; Table 9 effective Z also OK if you prefer AC.",
+  "columns": {
+    "size": "string as printed, e.g. \"12\" or \"250\"",
+    "cuOhmsPerKft": "number|null",
+    "alOhmsPerKft": "number|null"
+  },
+  "editions": {
+    "2023": {
+      "label": "Chapter 9, Table 8",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    },
+    "2017": {
+      "label": "Chapter 9, Table 8",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    },
+    "2011": {
+      "label": "Chapter 9, Table 8",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    }
+  }
+}

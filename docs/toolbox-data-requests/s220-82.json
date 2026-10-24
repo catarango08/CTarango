@@ -1,0 +1,38 @@
+{
+  "table": "s220-82",
+  "tool": "Service load calc",
+  "targetFile": "src/lib/toolbox/data/s220-82.ts",
+  "export": "S220_82",
+  "instructions": "All numbers of the optional dwelling method as rows: VA per sq ft, VA per small-appliance and laundry circuit, the general-load first-VA threshold and remainder percent, and each HVAC option percent (label = option wording). If the method does not fit these kinds, tell us and we will change the code.",
+  "columns": {
+    "kind": "\"general-va-per-sqft\"|\"small-appliance-va-per-circuit\"|\"laundry-va-per-circuit\"|\"general-first-va\"|\"general-remainder-pct\"|\"hvac-option-pct\"",
+    "label": "string",
+    "value": "number"
+  },
+  "editions": {
+    "2023": {
+      "label": "220.82",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    },
+    "2017": {
+      "label": "220.82",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    },
+    "2011": {
+      "label": "220.82",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    }
+  }
+}

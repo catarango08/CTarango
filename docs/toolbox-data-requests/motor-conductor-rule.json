@@ -1,0 +1,37 @@
+{
+  "table": "motor-conductor-rule",
+  "tool": "Motor FLC (wire suggestion)",
+  "targetFile": "src/lib/toolbox/data/motors.ts",
+  "export": "S430_22",
+  "instructions": "The section and percent of FLC used to size a single motor branch-circuit conductor. Also correct the label.",
+  "columns": {
+    "rule": "string",
+    "percentOfFlc": "number"
+  },
+  "editions": {
+    "2023": {
+      "label": "(section TBD by Sparky)",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    },
+    "2017": {
+      "label": "(section TBD by Sparky)",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    },
+    "2011": {
+      "label": "(section TBD by Sparky)",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "table": "t300-5",
+  "tool": "Burial depth",
+  "targetFile": "src/lib/toolbox/data/t300-5.ts",
+  "export": "T300_5",
+  "instructions": "Minimum cover in inches for every location row \u00d7 wiring-method column; put footnote text in note.",
+  "columns": {
+    "location": "string",
+    "wiringMethod": "string",
+    "inches": "number|null",
+    "note": "string (optional)"
+  },
+  "editions": {
+    "2023": {
+      "label": "Table 300.5",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    },
+    "2017": {
+      "label": "Table 300.5",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    },
+    "2011": {
+      "label": "Table 300.5",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    }
+  }
+}

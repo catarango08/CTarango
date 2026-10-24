@@ -1,0 +1,37 @@
+{
+  "table": "t314-16a",
+  "tool": "Box fill",
+  "targetFile": "src/lib/toolbox/data/t314-16.ts",
+  "export": "T314_16A",
+  "instructions": "Each box row: trade size/type description as printed and its volume in cubic inches.",
+  "columns": {
+    "box": "string, e.g. trade size + type as printed",
+    "cubicIn": "number"
+  },
+  "editions": {
+    "2023": {
+      "label": "Table 314.16(A)",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    },
+    "2017": {
+      "label": "Table 314.16(A)",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    },
+    "2011": {
+      "label": "Table 314.16(A)",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    }
+  }
+}

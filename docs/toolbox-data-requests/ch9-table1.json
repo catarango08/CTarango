@@ -1,0 +1,38 @@
+{
+  "table": "ch9-table1",
+  "tool": "Conductor fill",
+  "targetFile": "src/lib/toolbox/data/ch9-fill.ts",
+  "export": "CH9_TABLE1",
+  "instructions": "Max fill percent by number of conductors. Use minConductors/maxConductors (null = no upper limit).",
+  "columns": {
+    "minConductors": "number",
+    "maxConductors": "number|null",
+    "percent": "number"
+  },
+  "editions": {
+    "2023": {
+      "label": "Chapter 9, Table 1",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    },
+    "2017": {
+      "label": "Chapter 9, Table 1",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    },
+    "2011": {
+      "label": "Chapter 9, Table 1",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    }
+  }
+}

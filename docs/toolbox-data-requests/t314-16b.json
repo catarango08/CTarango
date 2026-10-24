@@ -1,0 +1,37 @@
+{
+  "table": "t314-16b",
+  "tool": "Box fill",
+  "targetFile": "src/lib/toolbox/data/t314-16.ts",
+  "export": "T314_16B",
+  "instructions": "Volume allowance per conductor, by size.",
+  "columns": {
+    "size": "string",
+    "cubicIn": "number"
+  },
+  "editions": {
+    "2023": {
+      "label": "Table 314.16(B)",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    },
+    "2017": {
+      "label": "Table 314.16(B)",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    },
+    "2011": {
+      "label": "Table 314.16(B)",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    }
+  }
+}

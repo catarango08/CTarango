@@ -1,0 +1,38 @@
+{
+  "table": "s240-4d",
+  "tool": "Ampacity / breaker",
+  "targetFile": "src/lib/toolbox/data/s240-4d.ts",
+  "export": "S240_4D",
+  "instructions": "Each small conductor size and material listed in 240.4(D) with its max overcurrent protection.",
+  "columns": {
+    "size": "string",
+    "material": "\"Cu\"|\"Al\"",
+    "maxOcpdAmps": "number"
+  },
+  "editions": {
+    "2023": {
+      "label": "240.4(D)",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    },
+    "2017": {
+      "label": "240.4(D)",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    },
+    "2011": {
+      "label": "240.4(D)",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    }
+  }
+}
