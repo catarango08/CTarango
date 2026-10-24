@@ -16,7 +16,7 @@ export function EditionPicker({ edition, onChange }: { edition: Edition; onChang
     <div role="radiogroup" aria-label="NEC edition" className="grid grid-cols-3 gap-1">
       {EDITIONS.map((e) => (
         <button key={e} type="button" role="radio" aria-checked={edition === e} onClick={() => onChange(e)}
-          className={`btn min-h-12 justify-center text-base ${edition === e ? 'btn-primary' : ''}`}>NEC {e}</button>
+          className={`${edition === e ? 'btn-primary' : 'btn'} min-h-12 justify-center text-base`}>NEC {e}</button>
       ))}
     </div>
   );
@@ -67,7 +67,7 @@ export function Seg<T extends string | number>({ label, value, options, onChange
       <p className="mb-1 text-xs font-semibold">{label}</p>
       <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
         {options.map((o) => (
-          <button key={String(o.v)} type="button" aria-pressed={value === o.v} onClick={() => onChange(o.v)} className={`btn min-h-12 justify-center px-1 text-sm ${value === o.v ? 'btn-primary' : ''}`}>{o.l}</button>
+          <button key={String(o.v)} type="button" aria-pressed={value === o.v} onClick={() => onChange(o.v)} className={`${value === o.v ? 'btn-primary' : 'btn'} min-h-12 justify-center px-1 text-sm`}>{o.l}</button>
         ))}
       </div>
     </div>

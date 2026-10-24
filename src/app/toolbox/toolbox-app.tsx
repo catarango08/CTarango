@@ -50,7 +50,7 @@ export function ToolboxApp() {
           ))}
         </div>
       )}
-      <p className="text-xs text-[color:var(--ink-muted)]">Works with no signal once opened. Code tools show results only after Sparky reviews each table.</p>
+      <p className="text-xs text-[color:var(--ink-muted)]">Works with no signal once opened. NEC data supplied by Sparky (Oct 24, 2026). Orange VERIFY marks cells he could not confirm.</p>
     </div>
   );
 }

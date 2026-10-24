@@ -251,7 +251,7 @@ export function Burial({ edition }: P) {
       <PendingGate tables={[t]} edition={edition}>
         <Pick label="Location" value={loc} onChange={setLoc} options={[...new Set(t.rows.map((r) => r.location))]} />
         {loc && <Result><p className="text-xs">Minimum cover, inches</p><ul>{t.rows.filter((r) => r.location === loc).map((r) => (
-          <li key={r.column} className="flex justify-between gap-3 border-t border-[color:var(--line)] py-2 text-sm"><span>Col {r.column}: {r.wiringMethod}</span><b className="shrink-0 text-right">{r.cover}{r.verify && <VerifyBadge title={r.verify} />}</b></li>
+          <li key={r.column} className="border-t border-[color:var(--line)] py-2 text-sm"><span className="block">{r.wiringMethod}</span><b className="block text-base">{r.cover}{r.verify && <VerifyBadge title={r.verify} />}</b></li>
         ))}</ul><VerifyNotes notes={[...new Set(t.rows.filter((r) => r.location === loc && r.verify).map((r) => r.verify!))]} /></Result>}
         <Notes tables={[t]} />
       </PendingGate>
