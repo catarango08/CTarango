@@ -1,0 +1,39 @@
+{
+  "table": "t250-66",
+  "tool": "GEC / EGC",
+  "targetFile": "src/lib/toolbox/data/grounding.ts",
+  "export": "T250_66",
+  "instructions": "Rows in table order: the largest service conductor bound (Cu and Al as printed) and the GEC size (Cu and Al).",
+  "columns": {
+    "serviceCu": "string as printed",
+    "serviceAl": "string as printed",
+    "gecCu": "string",
+    "gecAl": "string"
+  },
+  "editions": {
+    "2023": {
+      "label": "Table 250.66",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    },
+    "2017": {
+      "label": "Table 250.66",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    },
+    "2011": {
+      "label": "Table 250.66",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    }
+  }
+}

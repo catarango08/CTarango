@@ -1,0 +1,39 @@
+{
+  "table": "t310-16",
+  "tool": "Ampacity / breaker",
+  "targetFile": "src/lib/toolbox/data/t310-16.ts",
+  "export": "T310_16",
+  "instructions": "Every size \u00d7 material \u00d7 temperature column, as printed. One row per cell. Include the column heading text exactly (it becomes the picker label).",
+  "columns": {
+    "size": "string",
+    "material": "\"Cu\"|\"Al\"",
+    "column": "string, column heading as printed",
+    "amps": "number"
+  },
+  "editions": {
+    "2023": {
+      "label": "Table 310.16",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    },
+    "2017": {
+      "label": "Table 310.15(B)(16)",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    },
+    "2011": {
+      "label": "Table 310.15(B)(16)",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    }
+  }
+}

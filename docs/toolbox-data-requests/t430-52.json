@@ -1,0 +1,38 @@
+{
+  "table": "t430-52",
+  "tool": "Motor FLC",
+  "targetFile": "src/lib/toolbox/data/motors.ts",
+  "export": "T430_52",
+  "instructions": "Percent of FLC per motor type \u00d7 protective device column, headings as printed.",
+  "columns": {
+    "motorType": "string",
+    "device": "string",
+    "percent": "number"
+  },
+  "editions": {
+    "2023": {
+      "label": "Table 430.52",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    },
+    "2017": {
+      "label": "Table 430.52",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    },
+    "2011": {
+      "label": "Table 430.52",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    }
+  }
+}

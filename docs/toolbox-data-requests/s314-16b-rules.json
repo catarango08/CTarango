@@ -1,0 +1,38 @@
+{
+  "table": "s314-16b-rules",
+  "tool": "Box fill",
+  "targetFile": "src/lib/toolbox/data/t314-16.ts",
+  "export": "S314_16B_RULES",
+  "instructions": "Each counting rule (clamps, fittings, devices, grounds, etc. \u2014 as you word it): how many volume allowances and on what conductor size basis.",
+  "columns": {
+    "item": "string",
+    "volumeAllowances": "number",
+    "basis": "string, e.g. \"largest conductor entering\""
+  },
+  "editions": {
+    "2023": {
+      "label": "314.16(B)",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    },
+    "2017": {
+      "label": "314.16(B)",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    },
+    "2011": {
+      "label": "314.16(B)",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    }
+  }
+}

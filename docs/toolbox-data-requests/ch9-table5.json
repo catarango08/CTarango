@@ -1,0 +1,38 @@
+{
+  "table": "ch9-table5",
+  "tool": "Conduit fill",
+  "targetFile": "src/lib/toolbox/data/ch9-fill.ts",
+  "export": "CH9_TABLE5",
+  "instructions": "Approximate area per conductor for THHN/THWN-2 and XHHW-2, every size.",
+  "columns": {
+    "insulation": "\"THHN/THWN-2\"|\"XHHW-2\"",
+    "size": "string",
+    "areaSqIn": "number"
+  },
+  "editions": {
+    "2023": {
+      "label": "Chapter 9, Table 5",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    },
+    "2017": {
+      "label": "Chapter 9, Table 5",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    },
+    "2011": {
+      "label": "Chapter 9, Table 5",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    }
+  }
+}

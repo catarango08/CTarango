@@ -1,0 +1,38 @@
+{
+  "table": "t250-122",
+  "tool": "GEC / EGC",
+  "targetFile": "src/lib/toolbox/data/grounding.ts",
+  "export": "T250_122",
+  "instructions": "Each OCPD rating row with EGC size Cu and Al.",
+  "columns": {
+    "ocpdAmps": "number",
+    "egcCu": "string",
+    "egcAl": "string"
+  },
+  "editions": {
+    "2023": {
+      "label": "Table 250.122",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    },
+    "2017": {
+      "label": "Table 250.122",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    },
+    "2011": {
+      "label": "Table 250.122",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    }
+  }
+}

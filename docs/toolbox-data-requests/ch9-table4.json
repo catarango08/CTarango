@@ -1,0 +1,38 @@
+{
+  "table": "ch9-table4",
+  "tool": "Conduit fill",
+  "targetFile": "src/lib/toolbox/data/ch9-fill.ts",
+  "export": "CH9_TABLE4",
+  "instructions": "Total internal area (100%) per trade size for EMT, PVC Schedule 40, PVC Schedule 80, RMC.",
+  "columns": {
+    "raceway": "\"EMT\"|\"PVC 40\"|\"PVC 80\"|\"RMC\"",
+    "tradeSize": "string",
+    "totalAreaSqIn": "number"
+  },
+  "editions": {
+    "2023": {
+      "label": "Chapter 9, Table 4",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    },
+    "2017": {
+      "label": "Chapter 9, Table 4",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    },
+    "2011": {
+      "label": "Chapter 9, Table 4",
+      "labelConfirmed": false,
+      "source": "",
+      "reviewedBy": "",
+      "reviewedOn": "",
+      "rows": []
+    }
+  }
+}
