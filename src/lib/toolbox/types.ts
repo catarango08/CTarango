@@ -19,7 +19,12 @@ export interface EditionTable<Row> {
   reviewedBy?: string;
   reviewedOn?: string;
   rows: Row[];
+  /** Table-level notes from Sparky's file (shown under the tool). */
+  notes?: string[];
 }
+
+/** Any row may carry a verify flag: Sparky marked the cell UNVERIFIED. Shown with a badge, never hidden. */
+export interface Verifiable { verify?: string }
 
 export type PerEdition<Row> = Record<Edition, EditionTable<Row>>;
 
@@ -38,3 +43,13 @@ export function pending<Row>(labels: Record<Edition, string>): PerEdition<Row> {
 }
 const same = (l: string): Record<Edition, string> => ({ '2023': l, '2017': l, '2011': l });
 export { same };
+
+export const SPARKY = 'Sparky';
+export const SPARKY_ON = '2026-10-24';
+/** Reviewed table, built from Sparky's delivered file. Rows may differ per edition. */
+export function live<Row>(labels: Record<Edition, string>, rows: Record<Edition, Row[]> | Row[], source: string, notes?: Record<Edition, string[]> | string[]): PerEdition<Row> {
+  const r = (e: Edition) => (Array.isArray(rows) ? rows : rows[e]);
+  const n = (e: Edition) => (notes == null ? undefined : Array.isArray(notes) ? notes : notes[e]);
+  const t = (e: Edition): EditionTable<Row> => ({ label: labels[e], status: 'reviewed', source, reviewedBy: SPARKY, reviewedOn: SPARKY_ON, rows: r(e), notes: n(e) });
+  return { '2023': t('2023'), '2017': t('2017'), '2011': t('2011') };
+}

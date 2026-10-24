@@ -11,7 +11,9 @@
     "notion:bootstrap": "tsx scripts/bootstrap-notion.ts",
     "notion:verify": "tsx scripts/verify-notion.ts",
     "notion:seed": "tsx scripts/seed-notion.ts",
-    "brand:contrast": "node scripts/contrast.mjs"
+    "brand:contrast": "node scripts/contrast.mjs",
+    "test": "tsx scripts/toolbox-test.mts",
+    "toolbox:import": "node scripts/toolbox-import.mjs"
   },
   "dependencies": {
     "clsx": "2.1.1",

@@ -1,3 +1,9 @@
+# Toolbox data requests — DELIVERED
+
+Sparky delivered every table on 2026-10-24. The files are in `docs/toolbox-data/` (01–17 plus README) and are now the source of truth.
+`npm run toolbox:import` parses their markdown tables into `src/lib/toolbox/data/sparky-raw.json`. `npm test` checks the data modules against the .md files row for row.
+The JSON templates in this folder are kept only for history.
+
 # Toolbox data requests (for Sparky)
 
 Rule: nothing here was filled from memory. Every table is empty and `pending-sparky`. Fill one JSON per table (all three editions), then a developer copies rows into the listed TS file and sets `status: "reviewed"`, `source`, `reviewedBy`, `reviewedOn`. A tool shows results only when all its tables are reviewed for the selected edition.

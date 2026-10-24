@@ -89,3 +89,28 @@ export function Result({ children }: { children: ReactNode }) {
   return <div className="rounded-lg bg-[color:var(--surface-2)] p-3 text-base" data-testid="result">{children}</div>;
 }
 export const n = (s: string) => (s.trim() === '' ? undefined : Number(s));
+
+/** Visible flag for cells Sparky marked UNVERIFIED. Never hidden. */
+export function VerifyBadge({ title }: { title?: string }) {
+  return <span title={title} data-testid="verify-badge" className="ml-1 inline-block rounded bg-orange-500 px-1.5 py-0.5 align-middle text-[11px] font-bold uppercase leading-none text-white">verify</span>;
+}
+/** Under a result: lists the UNVERIFIED cells the result relied on. */
+export function VerifyNotes({ notes }: { notes: string[] }) {
+  if (!notes.length) return null;
+  return (
+    <div className="mt-2 rounded border-2 border-orange-500 p-2 text-sm" data-testid="verify-result">
+      <p className="font-semibold">Result uses unverified data <VerifyBadge /></p>
+      <ul className="list-disc pl-5 text-xs">{notes.map((v) => <li key={v}>{v}</li>)}</ul>
+    </div>
+  );
+}
+/** Table notes and source file from Sparky's delivery. */
+export function Notes({ tables }: { tables: EditionTable<unknown>[] }) {
+  const items = tables.flatMap((t) => (t.notes ?? []).map((x) => `${t.label}: ${x}`));
+  return (
+    <details className="text-xs text-[color:var(--ink-muted)]">
+      <summary className="min-h-12 cursor-pointer py-3 font-semibold">Table notes &amp; sources</summary>
+      <ul className="list-disc space-y-1 pl-5">{items.map((x) => <li key={x}>{x}</li>)}{tables.map((t) => <li key={t.label + 's'}>{t.label}: {t.source}{t.reviewedBy ? ` (supplied by ${t.reviewedBy}, ${t.reviewedOn})` : ''}</li>)}</ul>
+    </details>
+  );
+}
