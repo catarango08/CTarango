@@ -1,4 +1,4 @@
-import { live, same, type Verifiable } from '../types';
+import { flag, live, same, type Verifiable } from '../types';
 // Transcribed from Sparky's prose file 17 (no markdown table). Tests check each number appears there.
 export interface OptionalCalcRow extends Verifiable {
   kind: 'general-va-per-sqft' | 'small-appliance-va-per-circuit' | 'laundry-va-per-circuit' | 'general-first-va' | 'general-first-pct' | 'general-remainder-pct' | 'hvac';
@@ -21,4 +21,5 @@ const rows: OptionalCalcRow[] = [
   { kind: 'hvac', label: '(C)(6) 100% thermal storage / continuous heat', value: 100, hvac: { id: 'c6', parts: [{ input: 'storage', pct: 100 }] } },
 ];
 export const S220_82 = live<OptionalCalcRow>(same('220.82'), rows, 'docs/toolbox-data/17-220-82-optional-dwelling.md',
-  ['Single dwelling, 120/240 V or 208Y/120 V, service or feeder 100 A or more.', '(C)(3): if the compressor cannot run with the supplemental heat, leave the compressor out.', '2023 item order of (C)(1)–(6) and the "100 A or more" wording are UNVERIFIED.']);
+  ['Single dwelling, 120/240 V or 208Y/120 V, service or feeder 100 A or more.', '(C)(3): if the compressor cannot run with the supplemental heat, leave the compressor out.']);
+flag(S220_82, ['2023'], 'UNVERIFIED: 2023 order of (C)(1)–(6) and the "100 A or more" wording.');

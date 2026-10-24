@@ -1,4 +1,4 @@
-import { live, same, type Verifiable } from '../types';
+import { flag, live, same, type Verifiable } from '../types';
 import { rawFile, rawTable } from './raw';
 export interface GecRow extends Verifiable { serviceCu: string; serviceAl: string; gecCu: string; gecAl: string }
 export interface EgcRow extends Verifiable { ocpdAmps: number; egcCu: string; egcAl: string }
@@ -7,3 +7,4 @@ export const T250_66 = live<GecRow>(same('Table 250.66'), rawTable('15').rows.ma
 const V = 'UNVERIFIED: 2500–6000 A rows came from a search synthesis only (5000/6000 A Al: 1250; older references show 1200).';
 export const T250_122 = live<EgcRow>(same('Table 250.122'), rawTable('16').rows.map(([a, egcCu, egcAl]) => ({ ocpdAmps: Number(a), egcCu, egcAl, ...(Number(a) >= 2500 ? { verify: V } : {}) })), rawFile('16'),
   ['Upsized ungrounded conductors: increase EGC proportionally by circular mils (250.122(B)). EGC need not exceed the circuit conductors.']);
+flag(T250_66, ['2023'], 'UNVERIFIED: exact 2023 footnote wording.');

@@ -2,6 +2,14 @@
 
 Sparky delivered every table on 2026-10-24. The files are in `docs/toolbox-data/` (01–17 plus README) and are now the source of truth.
 `npm run toolbox:import` parses their markdown tables into `src/lib/toolbox/data/sparky-raw.json`. `npm test` checks the data modules against the .md files row for row.
+## Coming in v2
+- 430.250: the 200 V, 575 V and 2300 V columns.
+- Table 8 above 1000 kcmil, and Table 5 above 500 kcmil and for other insulations.
+- Nonmetallic boxes for 314.16(A).
+- AC voltage drop (reactance, Ch. 9 Table 9).
+- Ch. 9 Note 7 round-up for same-size conductors.
+- The 240.4(B) next-size-up conditions, so it can move from VERIFY to automatic.
+
 The JSON templates in this folder are kept only for history.
 
 # Toolbox data requests (for Sparky)

@@ -25,10 +25,12 @@ export function EditionPicker({ edition, onChange }: { edition: Edition; onChang
 /** Cites the tables a tool uses for the chosen edition. */
 export function Cite({ tables, edition }: { tables: EditionTable<unknown>[]; edition: Edition }) {
   return (
-    <p className="text-xs text-[color:var(--ink-muted)]" data-testid="cite">
-      NEC {edition}: {tables.map((t) => t.label).join(' · ')}
+    <><p className="text-xs text-[color:var(--ink-muted)]" data-testid="cite">
+      NEC {edition}: {tables.map((t, k) => <span key={t.label}>{k ? ' · ' : ''}{t.label}{t.verify?.length ? <VerifyBadge title={t.verify.join(' ')} /> : null}</span>)}
       {tables.some((t) => !isReady(t)) ? ' — pending review' : ''}
     </p>
+    {tables.some((t) => t.verify?.length) && <ul className="text-xs text-[color:var(--ink-muted)]" data-testid="cite-verify">{tables.flatMap((t) => (t.verify ?? []).map((v) => <li key={t.label + v}>{t.label}: {v} <VerifyBadge /></li>))}</ul>}
+    </>
   );
 }
 
@@ -112,5 +114,16 @@ export function Notes({ tables }: { tables: EditionTable<unknown>[] }) {
       <summary className="min-h-12 cursor-pointer py-3 font-semibold">Table notes &amp; sources</summary>
       <ul className="list-disc space-y-1 pl-5">{items.map((x) => <li key={x}>{x}</li>)}{tables.map((t) => <li key={t.label + 's'}>{t.label}: {t.source}{t.reviewedBy ? ` (supplied by ${t.reviewedBy}, ${t.reviewedOn})` : ''}</li>)}</ul>
     </details>
+  );
+}
+
+/** One rounding outcome, labeled with the rule that produced it. */
+export function RoundLine({ label, r }: { label: string; r: { amps: number | null; mode: string; rule: string; verify?: string } }) {
+  return (
+    <div className="mt-1" data-testid="round">
+      <p>{label}: <b>{r.amps == null ? '—' : `${r.mode === 'up' ? '' : 'do not exceed '}${r.amps} A`}</b>{r.verify && <VerifyBadge title={r.verify} />}</p>
+      <p className="text-xs">{r.mode === 'up' ? '↑ Round up: ' : r.mode === 'down' ? '↓ Round down: ' : ''}{r.rule}</p>
+      {r.verify && <p className="text-xs text-orange-700">{r.verify}</p>}
+    </div>
   );
 }

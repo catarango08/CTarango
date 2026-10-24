@@ -1,4 +1,4 @@
-import { live, type Edition, type Verifiable } from '../types';
+import { flag, live, type Edition, type Verifiable } from '../types';
 import { rawFile, rawTable } from './raw';
 /** Cells kept as text exactly as supplied (some are not plain numbers). */
 export interface CoverRow extends Verifiable { location: string; column: number; wiringMethod: string; cover: string }
@@ -13,5 +13,6 @@ const common = ['Cover in inches, top of cable or raceway to finished grade.', '
 export const T300_5 = live<CoverRow>({ '2023': 'Table 300.5', '2017': 'Table 300.5', '2011': 'Table 300.5' }, { '2023': rows('2023'), '2017': rows('2017'), '2011': rows('2011') }, rawFile('14'), {
   '2011': ['0 to 600 V.', ...common],
   '2017': ['0 to 1000 V. Col 5 footnotes a/b allow less depth for listed low-voltage lighting (411) and pool/spa low-voltage lighting.', ...common],
-  '2023': ['0 to 1000 V. Col 5 footnotes as 2017. EMT added to Col 3; Note 6: direct-buried EMT must meet 358.10.', 'Designation (300.5 vs 300.5(A)) is UNVERIFIED.', ...common],
+  '2023': ['0 to 1000 V. Col 5 footnotes as 2017. EMT added to Col 3; Note 6: direct-buried EMT must meet 358.10.', ...common],
 });
+flag(T300_5, ['2023'], 'UNVERIFIED: 2023 designation, Table 300.5 vs 300.5(A).');

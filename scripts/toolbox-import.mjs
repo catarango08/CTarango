@@ -16,7 +16,7 @@ export function parse(text) {
 }
 export function load() {
   const out = {};
-  for (const f of fs.readdirSync(dir).filter((f) => /^\d\d-.*\.md$/.test(f)).sort()) out[f.slice(0, 2)] = { file: f, tables: parse(fs.readFileSync(path.join(dir, f), 'utf8')) };
+  for (const f of fs.readdirSync(dir).filter((f) => /^\d\d-.*\.md$/.test(f)).sort()) { const t = fs.readFileSync(path.join(dir, f), 'utf8'); out[f.slice(0, 2)] = { file: f, tables: parse(t), text: t }; }
   return out;
 }
 if (process.argv[1].endsWith('toolbox-import.mjs')) {

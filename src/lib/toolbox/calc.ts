@@ -10,6 +10,9 @@ import type { FillPercentRow, RacewayAreaRow, WireAreaRow, Raceway, Insulation }
 import type { FlcRow, OcpdPercentRow, ConductorFactorRow } from './data/motors';
 import type { EgcRow, GecRow } from './data/grounding';
 import type { OptionalCalcRow } from './data/s220-82';
+import type { StdRow } from './data/s240-6a';
+import type { Exc2Row } from './data/motors';
+
 
 const SQRT3 = Math.sqrt(3);
 export const round = (n: number, d = 2) => Math.round(n * 10 ** d) / 10 ** d;
@@ -174,4 +177,53 @@ export function dwelling(rows: OptionalCalcRow[], i: DwellingIn) {
   const hvac = best?.va ?? 0;
   const total = generalDemand + hvac;
   return { generalVa: round(general, 0), generalDemandVa: round(generalDemand, 0), hvacVa: hvac, hvacOption: best && best.va > 0 ? best.label : null, options, totalVa: round(total, 0), amps: round(total / i.volts, 1), verify: flags(...rows) };
+}
+
+// ── 240.6(A) standard sizes and rounding ───────────────────────────
+export type DeviceKind = 'fuse' | 'breaker';
+const stdList = (std: StdRow[], kind: DeviceKind) => std.filter((s) => kind === 'fuse' || !s.fuseOnly).map((s) => s.amps).sort((a, b) => a - b);
+export const nextStdUp = (std: StdRow[], x: number, kind: DeviceKind = 'breaker') => stdList(std, kind).find((s) => s >= x) ?? null;
+export const nextStdDown = (std: StdRow[], x: number, kind: DeviceKind = 'breaker') => [...stdList(std, kind)].reverse().find((s) => s <= x) ?? null;
+
+export interface Rounded { amps: number | null; mode: 'up' | 'down' | 'exact' | 'cap'; rule: string; verify?: string }
+
+/**
+ * Conductor OCPD. 240.4(D) small-conductor limits are hard caps. Otherwise the result is "do not exceed"
+ * the next standard size DOWN. 240.4(B) next-size-up is shown only as a VERIFY option, because its
+ * conditions are not in Sparky's files.
+ */
+export function conductorOcpd(std: StdRow[], ampacityAmps: number, smallLimit: number | null) {
+  const main: Rounded = smallLimit != null
+    ? { amps: smallLimit, mode: 'cap', rule: `240.4(D): do not exceed ${smallLimit} A` }
+    : std.some((s) => !s.fuseOnly && s.amps === ampacityAmps)
+      ? { amps: ampacityAmps, mode: 'exact', rule: `240.6(A): ${ampacityAmps} A is a standard size; do not exceed` }
+      : { amps: nextStdDown(std, ampacityAmps), mode: 'down', rule: `240.6(A): next standard size down from ${ampacityAmps} A; do not exceed` };
+  const up = smallLimit == null && main.mode === 'down' ? nextStdUp(std, ampacityAmps) : null;
+  const nextUp: Rounded | null = up == null ? null : { amps: up, mode: 'up', rule: '240.4(B) next standard size up, only where its conditions are met', verify: "UNVERIFIED: the 240.4(B) conditions are not in Sparky's files. Check the codebook before using the next size up." };
+  return { main, nextUp };
+}
+
+/** Motor branch SC/GF. 430.52(C)(1) Exc. 1 allows the next higher standard size; Exc. 2 caps are "do not exceed". */
+export function motorOcpd(std: StdRow[], exc2: Exc2Row[], flc: number, percent: number, device: string, motorType: string) {
+  const kind: DeviceKind | null = /fuse/i.test(device) ? 'fuse' : /inverse-time/i.test(device) ? 'breaker' : null;
+  const raw = round((flc * percent) / 100, 2);
+  let main: Rounded;
+  if (kind == null) main = { amps: raw, mode: 'cap', rule: `${percent}% of FLC; do not exceed`, verify: "UNVERIFIED: 240.6(A) in Sparky's file lists fuse and inverse-time breaker ratings only, so no standard size is applied to instantaneous-trip breakers." };
+  else {
+    const up = nextStdUp(std, raw, kind);
+    main = up === raw ? { amps: up, mode: 'exact', rule: `${percent}% of FLC = standard size` }
+      : up == null ? { amps: raw, mode: 'cap', rule: `${percent}% of FLC; above the largest standard size, do not exceed`, verify: 'UNVERIFIED: no standard size above this value in 240.6(A).' }
+      : { amps: up, mode: 'up', rule: `430.52(C)(1) Exc. 1: ${raw} A is not a standard size; next higher standard ${kind} size permitted` };
+  }
+  const designB = motorType.startsWith('Design B');
+  const e = exc2.find((x) => x.device === device && (!x.when || (x.when === 'flc<=100' ? flc <= 100 : x.when === 'flc>100' ? flc > 100 : x.when === 'designB' ? designB : !designB)));
+  let exc: (Rounded & { percent: number; condition: string; rawAmps: number }) | null = null;
+  if (e) {
+    const cap = round((flc * e.percent) / 100, 2);
+    const down = kind ? nextStdDown(std, cap, kind) : null;
+    exc = kind
+      ? { amps: down, mode: down === cap ? 'exact' : 'down', rule: `430.52(C)(1) Exc. 2 (motor will not start): ${e.percent}% = ${cap} A; do not exceed; next standard ${kind} size down`, verify: e.verify, percent: e.percent, condition: e.condition, rawAmps: cap }
+      : { amps: cap, mode: 'cap', rule: `Exc. 2 (motor will not start): ${e.percent}%; do not exceed`, verify: e.verify ?? main.verify, percent: e.percent, condition: e.condition, rawAmps: cap };
+  }
+  return { rawAmps: raw, main, exc2: exc };
 }

@@ -21,6 +21,8 @@ export interface EditionTable<Row> {
   rows: Row[];
   /** Table-level notes from Sparky's file (shown under the tool). */
   notes?: string[];
+  /** Open wording/label questions (UNVERIFIED) — shown as a VERIFY badge next to the citation. */
+  verify?: string[];
 }
 
 /** Any row may carry a verify flag: Sparky marked the cell UNVERIFIED. Shown with a badge, never hidden. */
@@ -52,4 +54,9 @@ export function live<Row>(labels: Record<Edition, string>, rows: Record<Edition,
   const n = (e: Edition) => (notes == null ? undefined : Array.isArray(notes) ? notes : notes[e]);
   const t = (e: Edition): EditionTable<Row> => ({ label: labels[e], status: 'reviewed', source, reviewedBy: SPARKY, reviewedOn: SPARKY_ON, rows: r(e), notes: n(e) });
   return { '2023': t('2023'), '2017': t('2017'), '2011': t('2011') };
+}
+/** Attach an open wording/label question to some editions of a table (shown with a VERIFY badge). */
+export function flag<Row>(t: PerEdition<Row>, editions: Edition[], msg: string): PerEdition<Row> {
+  for (const e of editions) t[e] = { ...t[e], verify: [...(t[e].verify ?? []), msg] };
+  return t;
 }

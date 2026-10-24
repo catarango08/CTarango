@@ -8,12 +8,13 @@ import { T310_16 } from '@/lib/toolbox/data/t310-16';
 import { S240_4D } from '@/lib/toolbox/data/s240-4d';
 import { T314_16A, T314_16B, S314_16B_RULES } from '@/lib/toolbox/data/t314-16';
 import { CH9_TABLE1, CH9_TABLE4, CH9_TABLE5, NIPPLE_PERCENT, type Insulation, type Raceway } from '@/lib/toolbox/data/ch9-fill';
-import { T430_248, T430_250, T430_52, S430_22 } from '@/lib/toolbox/data/motors';
+import { T430_248, T430_250, T430_52, T430_52_EXC2, S430_22 } from '@/lib/toolbox/data/motors';
+import { S240_6A } from '@/lib/toolbox/data/s240-6a';
 import { T300_5 } from '@/lib/toolbox/data/t300-5';
 import { T250_66, T250_122 } from '@/lib/toolbox/data/grounding';
 import { S220_82 } from '@/lib/toolbox/data/s220-82';
-import { ampacity, ampacityColumns, boxFill, conduitFill, dwelling, egcFor, motor, ohms, sizeForLoad, vdKey, vdLabel, voltageDrop, type HvacInputs, type System } from '@/lib/toolbox/calc';
-import { Ahj, Cite, Notes, Num, PendingGate, Pick, Result, Seg, VerifyBadge, VerifyNotes, n } from './shared';
+import { ampacity, ampacityColumns, boxFill, conductorOcpd, motorOcpd, conduitFill, dwelling, egcFor, motor, ohms, sizeForLoad, vdKey, vdLabel, voltageDrop, type HvacInputs, type System } from '@/lib/toolbox/calc';
+import { Ahj, Cite, Notes, RoundLine, Num, PendingGate, Pick, Result, Seg, VerifyBadge, VerifyNotes, n } from './shared';
 
 type P = { edition: Edition };
 
@@ -105,7 +106,7 @@ export function VoltageDrop({ edition }: P) {
 }
 
 export function Ampacity({ edition }: P) {
-  const t = T310_16[edition], s = S240_4D[edition];
+  const t = T310_16[edition], s = S240_4D[edition], std = S240_6A[edition];
   const [mat, setMat] = useState<'Cu' | 'Al'>('Cu'); const [col, setCol] = useState(''); const [size, setSize] = useState(''); const [load, setLoad] = useState('');
   const cols = ampacityColumns(t.rows, mat);
   const a = size && col ? ampacity(t.rows, s.rows, size, mat, col) : null;
@@ -113,7 +114,7 @@ export function Ampacity({ edition }: P) {
   const cond = a ? s.rows.find((x) => x.size === size && x.material === mat)?.condition : undefined;
   return (
     <div className="space-y-3">
-      <Cite tables={[t, s]} edition={edition} />
+      <Cite tables={[t, s, std]} edition={edition} />
       <Seg label="Conductor" value={mat} onChange={(m) => { setMat(m); setSize(''); }} options={[{ v: 'Cu', l: 'Copper' }, { v: 'Al', l: 'Al / CCA' }]} />
       <PendingGate tables={[t, s]} edition={edition}>
         <div className="grid grid-cols-2 gap-2">
@@ -122,12 +123,16 @@ export function Ampacity({ edition }: P) {
           <Num label="Or: load to size for" value={load} onChange={setLoad} suffix="A" />
         </div>
         {(a || pick || n(load) != null) && <Result>
-          {a && <p>{size} {mat} @ {col}: <b>{a.amps ?? '—'} A</b>{a.smallConductorMaxOcpd != null && <> · max OCPD per {s.label}: <b>{a.smallConductorMaxOcpd} A</b>{cond && ` (${cond})`}</>}</p>}
+          {a && <p>{size} {mat} @ {col}: <b>{a.amps ?? '—'} A</b>{cond && <span className="text-xs"> ({s.label}: {cond})</span>}</p>}
+          {a?.amps != null && (() => { const o = conductorOcpd(std.rows, a.amps, a.smallConductorMaxOcpd); return <>
+            <RoundLine label="Breaker / fuse" r={o.main} />
+            {o.nextUp && <RoundLine label="Possible next size up" r={o.nextUp} />}
+          </>; })()}
           {n(load) != null && col && <p>Smallest for {load} A @ {col}: <b>{pick ?? 'none in table'}</b></p>}
           <p className="text-xs">Termination ratings, adjustment and correction factors still apply.</p>
           {a && <VerifyNotes notes={a.verify} />}
         </Result>}
-        <Notes tables={[t, s]} />
+        <Notes tables={[t, s, std]} />
       </PendingGate>
       <Ahj />
     </div>
@@ -210,11 +215,12 @@ export function ConduitFill({ edition }: P) {
 }
 
 export function Motors({ edition }: P) {
-  const t1 = T430_248[edition], t3 = T430_250[edition], t52 = T430_52[edition], c = S430_22[edition];
+  const t1 = T430_248[edition], t3 = T430_250[edition], t52 = T430_52[edition], c = S430_22[edition], std = S240_6A[edition];
   const [ph, setPh] = useState<1 | 3>(3); const [hp, setHp] = useState(''); const [v, setV] = useState(''); const [type, setType] = useState(''); const [dev, setDev] = useState('');
   const flc = ph === 1 ? t1 : t3;
   const r = hp && v ? motor(flc.rows, t52.rows, c.rows, hp, Number(v), type, dev) : null;
-  const tables = [flc, t52, c];
+  const tables = [flc, t52, c, std];
+  const mo = r && r.ocpdPercent != null ? motorOcpd(std.rows, T430_52_EXC2, r.flc, r.ocpdPercent, dev, type) : null;
   const hps = [...new Set(flc.rows.map((x) => x.hp))];
   const volts = [...new Set(flc.rows.filter((x) => !hp || x.hp === hp).map((x) => String(x.volts)))];
   return (
@@ -231,8 +237,10 @@ export function Motors({ edition }: P) {
         {r && <Result>
           <p>FLC ({flc.label}): <b>{r.flc} A</b></p>
           <p>Conductor ≥ {r.conductorPercent}% ({c.label}): <b>{r.conductorAmps} A</b> → size it in Ampacity</p>
-          <p>Max SC/GF device{r.ocpdPercent != null ? ` (${r.ocpdPercent}%)` : ''}: <b>{r.maxOcpd != null ? `${r.maxOcpd} A` : 'pick type and device'}</b></p>
-          {r.maxOcpd != null && <p className="text-xs">Not a standard size: next higher standard size permitted.</p>}
+          {!mo && <p>Max SC/GF device: <b>pick type and device</b></p>}
+          {mo && <><p className="mt-1">{t52.label}: {r.ocpdPercent}% × {r.flc} A = <b>{mo.rawAmps} A</b></p>
+            <RoundLine label="Max SC/GF device" r={mo.main} />
+            {mo.exc2 && <RoundLine label={`If the motor won't start (${mo.exc2.condition})`} r={mo.exc2} />}</>}
           <VerifyNotes notes={r.verify} />
         </Result>}
         <Notes tables={tables} />
