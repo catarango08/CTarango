@@ -50,6 +50,7 @@ export default async function TodayPage() {
       <div className="mb-5 grid grid-cols-2 gap-2 lg:hidden">
         <Link href="/new-call" className="btn min-h-14 justify-center text-base">+ New lead</Link>
         <Link href="/customers/new" className="btn min-h-14 justify-center text-base">+ Customer</Link>
+        <Link href="/toolbox" className="btn col-span-2 min-h-14 justify-center text-base">🧰 Toolbox</Link>
       </div>
       <div className="hidden lg:block">
         <MorningDigest />
