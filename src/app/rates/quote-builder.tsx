@@ -224,7 +224,7 @@ export function QuoteBuilder({ rates, pricing }: { rates: Rate[]; pricing: Prici
               {quote.materialsCost > 0 && (
                 <Line label={`Materials (cost ${money(quote.materialsCost)} + ${MONEY.materialsMarkup * 100}%)`} value={money(quote.materialsCharged)} />
               )}
-              {quote.trip > 0 && trip !== 'none' && <Line label={tripLabel(trip)} value={money(quote.trip)} sub="Includes the Zone 1 trip and the first hour" />}
+              {quote.trip > 0 && trip !== 'none' && <Line label={tripLabel(trip)} value={money(quote.trip)} sub={`Includes the Zone 1 trip and up to ${pricing[tier].includedHours} h`} />}
               {quote.zoneAdd > 0 && <Line label={trip === 'none' ? `Zone ${zone} trip` : `Zone ${zone} (over Zone 1)`} value={money(quote.zoneAdd)} />}
               {quote.laborCharged > 0 && <Line label={`${quote.hours} hr at ${money(quote.hourlyRate)}`} value={money(quote.laborCharged)} />}
               {quote.oldWorkAdd > 0 && <Line label="Old work" value={money(quote.oldWorkAdd)} />}
@@ -239,9 +239,10 @@ export function QuoteBuilder({ rates, pricing }: { rates: Rate[]; pricing: Prici
 
               {quote.depositDue > 0 && (
                 <p className="mt-1 text-sm font-semibold text-oxide">
-                  Deposit {money(quote.depositDue)} before the work starts.
+                  Deposit {money(quote.depositDue)} shown. Not required to schedule.
                 </p>
               )}
+              {quote.unresolved.map((u) => <p key={u} className="mt-1 text-xs text-oxide">{u}</p>)}
             </>
           )}
         </div>

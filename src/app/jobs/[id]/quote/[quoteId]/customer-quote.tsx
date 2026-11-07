@@ -1,5 +1,7 @@
 'use client';
 
+import { DEPOSIT_POLICY } from '@/config/deposit-policy';
+
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { priceOption, type QuoteDoc } from '@/lib/domain/options';
@@ -14,6 +16,7 @@ interface Props {
   business: { name: string; phone: string; email: string; tagline: string };
   doc: QuoteDoc; pricing: Pricing; accepted: { optionId: string; addOns: string[] } | null; signedBy: string;
   photo?: string; expires: string; payLink: string; depositIn: boolean; scheduled: string;
+  serviceCreditUsed?: number;
 }
 
 /**
@@ -36,7 +39,7 @@ export function CustomerQuote(p: Props) {
   const [ntDone, setNtDone] = useState<string | null>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const option = p.doc.options.find((o) => o.id === optionId) ?? p.doc.options[0];
-  const priced = useMemo(() => priceOption(p.doc, option, p.pricing, addOns), [p.doc, option, p.pricing, addOns]);
+  const priced = useMemo(() => priceOption(p.doc, option, p.pricing, addOns, { serviceCreditUsed: p.serviceCreditUsed }), [p.doc, option, p.pricing, addOns, p.serviceCreditUsed]);
   const dep = priced.depositInfo;
   const depositSentence = dep?.sentence ?? (priced.deposit ? `To schedule your job, a deposit of ${money(priced.deposit)} is due at signing and is credited in full to your final invoice.` : 'No deposit is required to schedule this job; payment is due on completion.');
 
@@ -97,8 +100,8 @@ export function CustomerQuote(p: Props) {
       {step === 2 && (
         <section className="mt-3 space-y-3">
           <h1 className="text-2xl font-bold">Pick one</h1>
-          {p.doc.options.filter((o, i, arr) => i === 0 || priceOption(p.doc, o, p.pricing, addOns).total !== priceOption(p.doc, arr[i - 1], p.pricing, addOns).total).map((o) => {
-            const t = priceOption(p.doc, o, p.pricing, addOns).total;
+          {p.doc.options.filter((o, i, arr) => i === 0 || priceOption(p.doc, o, p.pricing, addOns, { serviceCreditUsed: p.serviceCreditUsed }).total !== priceOption(p.doc, arr[i - 1], p.pricing, addOns, { serviceCreditUsed: p.serviceCreditUsed }).total).map((o) => {
+            const t = priceOption(p.doc, o, p.pricing, addOns, { serviceCreditUsed: p.serviceCreditUsed }).total;
             const sel = o.id === option.id;
             const checks = (o.items ?? []).filter((i) => i.qty > 0).map((i) => `${i.name}${i.qty > 1 ? ` × ${i.qty}` : ''}`).concat(o.lines.map((l) => l.name));
             return (
@@ -177,15 +180,20 @@ export function CustomerQuote(p: Props) {
           <h1 className="mt-4 text-2xl font-bold">Deposit {priced.deposit ? money(priced.deposit) : ''}</h1>
           {priced.deposit > 0 ? (
             <div className="mt-3 space-y-2">
-              {p.payLink ? <a href={p.payLink} className={`${big} flex items-center justify-center bg-neutral-900 text-white`}>Pay by card ({money(priced.deposit + (dep?.cardFee ?? 0))} incl. 2.5% card fee)</a>
-                : <p className="text-base text-neutral-600">Card link not set on this job yet.</p>}
+              {p.payLink ? <a href={p.payLink} className={`${big} flex items-center justify-center bg-neutral-900 text-white`}>Pay by card ({money((Math.round(priced.deposit * 100) + Math.round(Math.round(priced.deposit * 100) * DEPOSIT_POLICY.cardFee)) / 100)} incl. 2.5% card fee)</a>
+                : <p className="text-base text-neutral-600">Card payments are not set up yet.</p>}
               <div className="grid grid-cols-3 gap-2">
                 {['Zelle', 'Check', 'Cash'].map((m) => (
                   <button key={m} type="button" className={`min-h-14 rounded-lg border-2 ${paid === m ? 'border-green-600 bg-green-50' : 'border-neutral-300'}`}
-                    onClick={() => { setPaid(m); patchRecord('jobs', p.jobId, { depositIn: true, deposit: priced.deposit, paymentMethod: m === 'Zelle' ? 'ACH' : m }); }}>{m} received</button>
+                    onClick={async () => {
+                      const res = await fetch('/api/payments/manual', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jobId: p.jobId, kind: 'deposit', method: m }) });
+                      if (res.ok) setPaid(m);
+                      else setErr(((await res.json().catch(() => ({}))) as { error?: string }).error ?? 'Could not record the deposit');
+                    }}>{m} received</button>
                 ))}
               </div>
               {paid && <p className="text-base text-green-700">Deposit marked received{paid !== 'received' ? ` (${paid})` : ''}.</p>}
+              {err && <p className="text-base text-red-700">{err}</p>}
             </div>
           ) : <p className="mt-2 text-base">No deposit needed.</p>}
           <Next to={6} label="Pick a date →" />

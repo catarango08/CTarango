@@ -7,7 +7,8 @@ import { SchemaNotice } from './schema-notice';
 /** The login screen stands alone; everything else gets the sidebar and gutters. */
 export function AppFrame({ storeKind, children }: { storeKind: 'notion' | 'demo'; children: React.ReactNode }) {
   const pathname = usePathname();
-  if (pathname === '/login') return <>{children}</>;
+  // Customer pay pages stand alone too: no internal nav for customers.
+  if (pathname === '/login' || pathname.startsWith('/pay/')) return <>{children}</>;
 
   return (
     <>

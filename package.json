@@ -12,22 +12,26 @@
     "notion:verify": "tsx scripts/verify-notion.ts",
     "notion:seed": "tsx scripts/seed-notion.ts",
     "brand:contrast": "node scripts/contrast.mjs",
-    "test": "tsx scripts/toolbox-test.mts",
-    "toolbox:import": "node scripts/toolbox-import.mjs"
+    "test": "tsx scripts/toolbox-test.ts && tsx scripts/payments-test.ts",
+    "toolbox:import": "node scripts/toolbox-import.mjs",
+    "test:payments": "tsx scripts/payments-test.ts"
   },
   "dependencies": {
     "clsx": "2.1.1",
     "date-fns": "4.1.0",
     "leaflet": "^1.9.4",
     "next": "16.3.5",
+    "pg": "^8.23.1",
     "react": "19.1.1",
     "react-dom": "19.1.1",
+    "stripe": "^23.1.0",
     "tesseract.js": "^5.1.1",
     "zod": "3.25.76"
   },
   "devDependencies": {
     "@types/leaflet": "^1.9.20",
     "@types/node": "22.15.3",
+    "@types/pg": "^8.23.1",
     "@types/react": "19.1.9",
     "@types/react-dom": "19.1.7",
     "autoprefixer": "10.4.21",

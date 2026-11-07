@@ -29,8 +29,8 @@ function Seg<T extends string | number>({ value, options, onChange }: { value: T
  * Hours, buffer and markups are internal; the customer screen shows names and
  * totals only. Drafts live on the phone until saved.
  */
-export function QuoteBuilder({ jobId, initial, pricing, customer, diagnostic, foundDefault, latestQuoteId }: {
-  jobId: string; initial: QuoteDoc; pricing: Pricing; rates?: RateOpt[]; customer: string; diagnostic: number; foundDefault: string; latestQuoteId?: string;
+export function QuoteBuilder({ jobId, initial, pricing, customer, diagnostic, foundDefault, latestQuoteId, serviceCreditUsed = 0 }: {
+  jobId: string; initial: QuoteDoc; pricing: Pricing; rates?: RateOpt[]; customer: string; diagnostic: number; foundDefault: string; latestQuoteId?: string; serviceCreditUsed?: number;
 }) {
   const DKEY = `te-quote-draft:${jobId}`;
   const [doc, setDoc] = useState<QuoteDoc>(() => ({ furnish: 'contractor', visits: 1, found: foundDefault, ...initial }));
@@ -45,7 +45,7 @@ export function QuoteBuilder({ jobId, initial, pricing, customer, diagnostic, fo
   useEffect(() => { localStorage.setItem(DKEY, JSON.stringify(doc)); }, [doc, DKEY]);
 
   const opt = doc.options[Math.min(active, doc.options.length - 1)];
-  const priced = useMemo(() => doc.options.map((o) => priceOption(doc, o, pricing, [])), [doc, pricing]);
+  const priced = useMemo(() => doc.options.map((o) => priceOption(doc, o, pricing, [], { serviceCreditUsed })), [doc, pricing, serviceCreditUsed]);
   const cur = priced[Math.min(active, priced.length - 1)];
   const copyIssues = checkCopy([doc.scope, doc.found ?? '', ...doc.options.flatMap((o) => [o.label, o.summary, o.benefit ?? '', ...(o.items ?? []).map((i) => i.name)]), doc.discount?.label ?? ''].join(' '));
 
@@ -200,7 +200,8 @@ export function QuoteBuilder({ jobId, initial, pricing, customer, diagnostic, fo
           <p className="font-semibold">Deposit rule: {cur.depositInfo.rule}</p>
           {cur.depositInfo.candidates.length > 1 && <ul className="mt-1 text-[color:var(--ink-muted)]">{cur.depositInfo.candidates.map((c) => <li key={c.rule}>{c.rule}: {money(c.amount)}</li>)}</ul>}
           {cur.depositInfo.schedule && <p className="mt-1">30/40/30: {money(cur.depositInfo.schedule.signing)} / {money(cur.depositInfo.schedule.roughIn)} / {money(cur.depositInfo.schedule.final)}</p>}
-          <p className="mt-1 text-xs text-[color:var(--ink-muted)]">Materials figure is at your cost (assumption).</p>
+          {cur.depositInfo.edgeCases.map((e) => <p key={e} className="mt-1 text-[color:var(--hazard)]">{e}</p>)}
+          <p className="mt-1 text-xs text-[color:var(--ink-muted)]">Shown, not required to schedule. Materials figure is at your cost (assumption).</p>
         </section>
       )}
 

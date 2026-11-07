@@ -16,7 +16,7 @@ export default async function ChangeOrderPage({ params }: { params: Promise<{ id
   if (!job) notFound();
   const pricing = await loadPricing();
   const tier = /commercial/i.test(String(job.kind ?? job.type ?? '')) ? 'commercial' : 'residential';
-  const rate = pricing[tier].hourly.day;
+  const rate = pricing[tier].projectHourly; // project labor rate (Nov 3: $90 residential); unchanged from before
   const presets = ASSEMBLIES.map((a) => ({ name: a.name, price: assemblyPrice(a.hours, a.material, rate) }));
   const past = (await relatedTo('quotes', 'job', id)).map((q) => ({ q, co: parseCO(q.data) })).filter((x) => x.co);
   return (

@@ -9,6 +9,15 @@ import { SESSION_COOKIE, authRequired, passcode, verifyToken } from '@/lib/auth'
  * Next 16 renamed the `middleware` file convention to `proxy`.
  */
 export async function proxy(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+  // Signed customer pay links are not the staff cookie, but they still require APP_PASSCODE to be set.
+  if (path === '/pay' || path.startsWith('/pay/') || path === '/api/stripe/webhook') {
+    if (!authRequired()) {
+      return NextResponse.json({ error: 'Card payments are not set up' }, { status: 503 });
+    }
+    return NextResponse.next();
+  }
+
   if (!authRequired()) return NextResponse.next();
 
   const secret = passcode();

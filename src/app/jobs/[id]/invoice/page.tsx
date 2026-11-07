@@ -1,11 +1,18 @@
-import { CO_DUE_ON_APPROVAL, coTotal, isChangeOrder, parseCO } from '@/lib/domain/change-order';
-import { cardFee } from '@/lib/domain/deposit';
+import { cardFeeCents, computeInvoice } from '@/lib/domain/invoice';
+import { payConfig } from '@/lib/payments/config';
+import { issuePayLink } from '@/lib/payments/checkout';
+import { paymentsReady } from '@/lib/payments/ready';
+import { getStore } from '@/lib/store';
+import { withJob } from '@/lib/payments/db';
+import { loadLedger } from '@/lib/payments/money';
+import { serializeLedger } from '@/lib/payments/ledger';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { findById, loadAll } from '@/lib/data';
 import { loadPricing } from '@/lib/pricing';
-import { num, relationIds } from '@/lib/calc';
-import { parseStored, priceOption } from '@/lib/domain/options';
+import { relationIds } from '@/lib/calc';
+import { parseStored } from '@/lib/domain/options';
+import { isChangeOrder } from '@/lib/domain/change-order';
 import { firstName } from '@/lib/domain/pipeline';
 import { BUSINESS } from '@/lib/domain/rules';
 import { CLOSE } from '@/config/close';
@@ -27,36 +34,29 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
   const stored = accepted ? parseStored(accepted.data) : null;
   const cust = customers.find((c) => relationIds(job.customer).includes(c.id));
 
-  let lines: { label: string; amount: number }[] = [];
-  let total = num(job.amount);
-  const signedCOs = quotes.filter((q) => relationIds(q.job).includes(id) && String(q.status) === 'Accepted').map((q) => ({ q, co: parseCO(q.data) })).filter((x) => x.co).map((x) => ({ id: x.q.id, co: x.co!, total: coTotal(x.co!) }));
-  const coOnly = sp.co ? signedCOs.find((c) => c.id === sp.co) : undefined;
-  const separateCOs = signedCOs.filter((c) => c.total > CO_DUE_ON_APPROVAL);
-  if (coOnly) {
-    lines = [{ label: `Change order ${coOnly.co.n} — due on approval`, amount: NaN }, ...coOnly.co.lines.map((l) => ({ label: `${l.name}${l.qty > 1 ? ` × ${l.qty}` : ''}`, amount: l.price * l.qty }))];
-    total = coOnly.total;
-  } else {
-    if (stored) {
-      const opt = stored.doc.options.find((o) => o.id === stored.accepted?.optionId) ?? stored.doc.options[0];
-      const p = priceOption(stored.doc, opt, pricing, stored.accepted?.addOns ?? []);
-      // Customer invoice shows work lines only, no labor/material split.
-      lines = [{ label: `${opt.label}${opt.summary ? ` — ${opt.summary}` : ''}`, amount: p.total }];
-      total = p.total;
-    } else if (total) {
-      lines = [{ label: String(job.name ?? 'Electrical work'), amount: total }];
-    }
-    for (const c of signedCOs.filter((c) => c.total <= CO_DUE_ON_APPROVAL)) {
-      lines.push({ label: `Change order ${c.co.n}: ${c.co.lines.map((l) => l.name).join(', ')}`, amount: c.total });
-      total += c.total;
-    }
-  }
-  const deposit = coOnly ? 0 : num(job.deposit);
-  const depositPaid = deposit > 0 && job.depositIn === true;
-  const subtotal = Math.max(0, total - (depositPaid ? deposit : 0));
+  // One calculation shared with card checkout. Credit comes from the payment database when it is ready.
+  const store = getStore();
+  const ready = await paymentsReady(store);
+  const ledger = ready.ok ? await withJob(id, (client) => loadLedger(client, id)) : undefined;
+  const jobView = ledger ? { ...job, paymentLedger: serializeLedger(ledger) } : job;
+  const inv = computeInvoice(jobView, quotes, pricing, { coId: sp.co, ledger });
+  const lines = inv.lines;
+  const total = inv.totalCents / 100;
+  const coOnly = inv.coOnly;
+  const separateCOs = inv.separateCOs.map((c) => ({ id: c.id, co: { n: c.n }, total: c.totalCents / 100 }));
+  const deposit = coOnly ? 0 : inv.depositCents / 100;
+  const depositPaid = inv.depositCreditCents > 0;
+  const paidOnline = inv.paidOnlineCents / 100;
+  const subtotal = inv.balanceCents / 100;
   const byCard = sp.card === '1' || String(job.paymentMethod) === 'Card';
-  const fee = byCard ? cardFee(subtotal) : 0;
+  const fee = byCard ? cardFeeCents(inv.balanceCents) / 100 : 0;
   const due = Math.round((subtotal + fee) * 100) / 100;
-  const payLink = String(job.payLink ?? '');
+  // Card pay link for exactly this balance. The legacy Pay Link field (fixed Stripe links) is not used.
+  const pc = payConfig();
+  const target = coOnly ? { jobId: id, kind: 'co' as const, coId: coOnly.id } : { jobId: id, kind: 'balance' as const };
+  const issued = pc.ok && ready.ok && inv.blockers.length === 0 && inv.balanceCents > 0 ? await issuePayLink(store, pc.cfg, target) : null;
+  const payUrl = issued?.ok ? issued.url : '';
+  const payLink = payUrl;
   const status = String(job.invoiceStatus ?? 'Draft');
 
   return (
@@ -66,7 +66,7 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
         <PrintButton />
       </div>
       <div className="no-print mb-4">
-        <InvoiceControls jobId={id} jobStatus={String(job.status ?? '')} due={due} byCard={byCard} coLinks={separateCOs.map((c) => ({ id: c.id, label: `Change order ${c.co.n} invoice (${money(c.total)})` }))} status={status} statuses={[...INVOICE_STATUSES]} payLink={payLink} linkLabel={CLOSE.payment.linkLabel} />
+        <InvoiceControls jobId={id} coId={coOnly?.id ?? ''} jobStatus={String(job.status ?? '')} due={due} byCard={byCard} coLinks={separateCOs.map((c) => ({ id: c.id, label: `Change order ${c.co.n} invoice (${money(c.total)})` }))} status={status} statuses={[...INVOICE_STATUSES]} payLink={payLink} linkLabel={CLOSE.payment.linkLabel} blockers={inv.blockers} repriceNote={inv.repriceNote ?? ''} configMissing={ready.ok ? [] : ready.missing} />
       </div>
       <article className="invoice mx-auto max-w-2xl bg-white p-6 text-neutral-900 shadow print:shadow-none">
         <header className="flex flex-wrap items-start justify-between gap-4 border-b-4 border-[#f2b705] pb-4">
@@ -97,6 +97,7 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
           </tbody>
           <tfoot className="text-sm">
             <tr><td className="pt-3 font-semibold">Total</td><td className="pt-3 text-right font-semibold tabular-nums">{money(total)}</td></tr>
+            {paidOnline > 0 && <tr><td>Paid by card online</td><td className="text-right tabular-nums">{money(-paidOnline)}</td></tr>}
             {deposit > 0 && <tr><td>Deposit {depositPaid ? 'received — credited in full' : '(not yet received)'}</td><td className="text-right tabular-nums">{depositPaid ? money(-deposit) : money(0)}</td></tr>}
             {fee > 0 && <tr><td>Card processing fee (2.5%)</td><td className="text-right tabular-nums">{money(fee)}</td></tr>}
             <tr><td className="pt-2 text-base font-bold">Balance due</td><td className="pt-2 text-right text-base font-bold tabular-nums">{status === 'Paid' ? money(0) : money(due)}</td></tr>
@@ -109,7 +110,7 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
             ) : (
               <p className="text-sm text-neutral-500">Pay by check, cash or card. Call {BUSINESS.phone}.</p>
             )}
-            {payLink && <p className="mt-1 text-xs text-neutral-500">Secure card payment through Stripe.</p>}
+            {payLink && <p className="mt-1 text-xs text-neutral-500">Secure card payment through Stripe (2.5% card fee added at checkout). {payLink}</p>}
           </section>
         )}
         {!coOnly && separateCOs.length > 0 && <p className="mt-3 text-xs text-neutral-500">Billed separately: {separateCOs.map((c) => `change order ${c.co.n} (${money(c.total)})`).join(', ')}.</p>}

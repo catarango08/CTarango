@@ -1,7 +1,7 @@
 import { fallbackPricing, tierForJobType, type Pricing } from './pricing';
 import type { RecordValue } from '../schema';
 import { num } from '../calc';
-import { depositRequired } from './gates';
+import { depositShown } from './gates';
 
 /**
  * "Status = next action", transcribed from the New client process page.
@@ -91,12 +91,12 @@ export function nextMove(job: RecordValue): Move {
 
   // Approved is where the deposit rule bites, so the instruction gets specific.
   if (status === 'Approved') {
-    const deposit = depositRequired(job.amount);
-    if (deposit.required && !job.depositIn) {
+    const deposit = depositShown(job);
+    if (deposit.amount > 0 && !job.depositIn) {
       return {
         ...move,
-        action: 'Collect the deposit',
-        instruction: `Job is $${num(job.amount).toLocaleString()}. Collect $${deposit.amount.toLocaleString()} (50%) before the work starts.`,
+        action: 'Deposit shown',
+        instruction: `Deposit of $${deposit.amount.toLocaleString()} is shown (${deposit.note})`,
       };
     }
   }
@@ -116,7 +116,7 @@ export function nextMove(job: RecordValue): Move {
 /** The diagnostic (day trip) that applies to a job, by type. Pass live pricing when you have it. */
 export function diagnosticFor(jobType: unknown, pricing: Pricing = fallbackPricing()): { fee: number; note: string } {
   const rates = pricing[tierForJobType(jobType)];
-  return { fee: rates.trip.day, note: `Zone 1 trip and first hour, then $${rates.hourly.day}/hr. Zones 2–3 add the difference.` };
+  return { fee: rates.trip.day, note: `Zone 1 trip and up to ${rates.includedHours} hour${rates.includedHours === 1 ? '' : 's'}, then $${rates.hourly.day}/hr${rates.includedHours === 2 ? " with the customer's OK" : ''}. Zones 2–3 add $${pricing.zones[2] - pricing.zones[1]} / $${pricing.zones[3] - pricing.zones[1]}.` };
 }
 
 export const STATUS_PLAYBOOK = PLAYBOOK;

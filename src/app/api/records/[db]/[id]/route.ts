@@ -4,6 +4,7 @@ import { tryGetDb, type DbKey } from '@/lib/schema';
 import { validateRecord } from '@/lib/schema/validate';
 import { findById } from '@/lib/data';
 import { statusSideEffects } from '@/lib/domain/pipeline';
+import { noteJobMoneyChanged } from '@/lib/payments/sync';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,6 +32,15 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ db: strin
   if (!result.ok) return NextResponse.json({ error: 'Validation failed', issues: result.errors }, { status: 422 });
 
   let values = result.values ?? {};
+  if (db === 'jobs') {
+    // Money fields are written by the payment database projection, not by the browser.
+    delete values.paymentLedger;
+    delete values.amountPaid;
+    delete values.checkoutSessions;
+    if (values.paid === true) delete values.paid;
+    if (values.depositIn === true) delete values.depositIn;
+    if (values.invoiceStatus === 'Paid') delete values.invoiceStatus;
+  }
   if (db === 'jobs' && values.status !== undefined) {
     const effects = statusSideEffects(await getStore().get('jobs', id), values);
     if (!effects.ok) return NextResponse.json({ error: effects.error }, { status: 422 });
@@ -39,6 +49,7 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ db: strin
 
   try {
     const record = await getStore().update(db as DbKey, id, values);
+    if (db === 'jobs' && ('amount' in values || 'deposit' in values)) await noteJobMoneyChanged(getStore(), id, 'job edit');
     return NextResponse.json({ record });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Update failed' }, { status: 502 });
