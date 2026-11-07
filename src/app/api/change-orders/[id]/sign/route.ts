@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getStore } from '@/lib/store';
 import { relationIds } from '@/lib/calc';
 import { CO_DUE_ON_APPROVAL, coTotal, parseCO } from '@/lib/domain/change-order';
+import { noteJobMoneyChanged } from '@/lib/payments/sync';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,6 +26,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
     if (jobId && total > CO_DUE_ON_APPROVAL) {
       await store.create('activityLog', { name: `Invoice change order ${co.n} ($${total}) — due on approval`, date: new Date().toISOString().slice(0, 10), type: 'Task', assignee: 'Office Manager', taskDone: false, job: [{ id: jobId }] }).catch(() => null);
     }
+    if (jobId) await noteJobMoneyChanged(store, jobId, 'change order signed');
     return NextResponse.json({ changeOrder: updated, total, dueOnApproval: total > CO_DUE_ON_APPROVAL });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Could not save' }, { status: 502 });

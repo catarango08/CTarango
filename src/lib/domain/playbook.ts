@@ -1,7 +1,7 @@
 import { fallbackPricing, tierForJobType, type Pricing } from './pricing';
 import type { RecordValue } from '../schema';
 import { num } from '../calc';
-import { depositRequired } from './gates';
+import { depositShown } from './gates';
 
 /**
  * "Status = next action", transcribed from the New client process page.
@@ -91,12 +91,12 @@ export function nextMove(job: RecordValue): Move {
 
   // Approved is where the deposit rule bites, so the instruction gets specific.
   if (status === 'Approved') {
-    const deposit = depositRequired(job.amount);
-    if (deposit.required && !job.depositIn) {
+    const deposit = depositShown(job);
+    if (deposit.amount > 0 && !job.depositIn) {
       return {
         ...move,
-        action: 'Collect the deposit',
-        instruction: `Job is $${num(job.amount).toLocaleString()}. Collect $${deposit.amount.toLocaleString()} (50%) before the work starts.`,
+        action: 'Deposit shown',
+        instruction: `Deposit of $${deposit.amount.toLocaleString()} is shown (${deposit.note})`,
       };
     }
   }

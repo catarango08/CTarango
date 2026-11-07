@@ -1,7 +1,7 @@
 import type { RecordValue } from '../schema';
 import type { Pricing } from '../domain/pricing';
 import { cardFeeCents, computeInvoice, toCents } from '../domain/invoice';
-import { hasProcessing, parseLedger, type PayKind } from './ledger';
+import { hasProcessing, parseLedger, sumCredited, type PayKind } from './ledger';
 import type { PayTarget } from './token';
 
 export interface ChargePlan {
@@ -21,17 +21,19 @@ export function planCharge(job: RecordValue, quotes: RecordValue[], pricing: Pri
   let base = 0; let title = ''; const blockers: string[] = [];
   if (t.kind === 'deposit') {
     const dep = toCents(Number(job.deposit) || 0);
+    const received = sumCredited(parseLedger(job.paymentLedger), 'deposit');
     title = `Deposit, invoice ${inv}`;
-    if (job.depositIn === true) blockers.push('Deposit already received');
     if (hasProcessing(parseLedger(job.paymentLedger), 'deposit')) blockers.push('A deposit card payment is still processing or under review');
     if (dep <= 0) blockers.push('No deposit set on this job');
-    base = dep;
+    else if (received >= dep) blockers.push('Deposit already received');
+    base = Math.max(0, dep - received);
   } else {
     const c = computeInvoice(job, quotes, pricing, { coId: t.kind === 'co' ? t.coId : undefined });
     blockers.push(...c.blockers);
     base = c.balanceCents;
     title = t.kind === 'co' ? `Change order ${c.coOnly?.n ?? ''}, invoice ${inv}` : `Invoice ${inv} balance`;
-    if (t.kind === 'balance' && job.depositIn !== true && c.depositCents > 0) blockers.push('Deposit not recorded as received; mark "Deposit in" or collect the deposit first so it is credited correctly');
+    const depositReceived = sumCredited(parseLedger(job.paymentLedger), 'deposit');
+    if (t.kind === 'balance' && c.depositCents > 0 && depositReceived < c.depositCents) blockers.push('Deposit has not been recorded as received. Record the cash, check, Zelle, or card deposit before charging the balance.');
   }
   if (base > 0 && base < STRIPE_MIN_CENTS) blockers.push('Amount is below the card minimum');
   if (base <= 0 && !blockers.length) blockers.push('Nothing is due');

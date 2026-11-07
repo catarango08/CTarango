@@ -1,5 +1,7 @@
 import { payConfig } from '@/lib/payments/config';
-import { signPayToken } from '@/lib/payments/token';
+import { issuePayLink } from '@/lib/payments/checkout';
+import { getStore } from '@/lib/store';
+import { serviceCreditUsedByJob } from '@/lib/domain/service-credit';
 import { notFound } from 'next/navigation';
 import { findById, loadAll, relatedTo } from '@/lib/data';
 import { loadPricing } from '@/lib/pricing';
@@ -13,9 +15,11 @@ export const dynamic = 'force-dynamic';
 
 /** What the customer sees on Corey's phone. Town only — no street address. */
 /** Deposit card link: app checkout for the deposit on the job (never a fixed Stripe link). */
-function depositPayUrl(jobId: string): string {
+async function depositPayUrl(jobId: string): Promise<string> {
   const c = payConfig();
-  return c.ok ? `${c.cfg.baseUrl}/pay/${signPayToken({ jobId, kind: 'deposit' }, c.cfg.linkSecret)}` : '';
+  if (!c.ok) return '';
+  const link = await issuePayLink(getStore(), c.cfg, { jobId, kind: 'deposit' });
+  return link.ok ? link.url : '';
 }
 
 export default async function CustomerQuotePage({ params }: { params: Promise<{ id: string; quoteId: string }> }) {
@@ -25,6 +29,7 @@ export default async function CustomerQuotePage({ params }: { params: Promise<{ 
   const stored = parseStored(quote.data);
   if (!stored) notFound();
   const pricing = await loadPricing();
+  const creditUsed = serviceCreditUsedByJob(await loadAll('quotes'), id, quoteId);
   const customers = await loadAll('customers');
   const cust = customers.find((c) => relationIds(job.customer).includes(c.id));
   const photos = await relatedTo('jobPhotos', 'job', id);
@@ -51,7 +56,8 @@ export default async function CustomerQuotePage({ params }: { params: Promise<{ 
       signedBy={String(quote.signedBy ?? '')}
       photo={photo}
       expires={expires}
-      payLink={depositPayUrl(id)}
+      payLink={await depositPayUrl(id)}
+      serviceCreditUsed={creditUsed}
       depositIn={job.depositIn === true}
       scheduled={scheduled}
     />

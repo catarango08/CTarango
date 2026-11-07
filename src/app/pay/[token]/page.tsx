@@ -4,6 +4,11 @@ import { loadPricing } from '@/lib/pricing';
 import { payConfig } from '@/lib/payments/config';
 import { planCharge } from '@/lib/payments/amounts';
 import { verifyPayToken } from '@/lib/payments/token';
+import { paymentsReady } from '@/lib/payments/ready';
+import { linkIsActive } from '@/lib/payments/checkout';
+import { serializeLedger } from '@/lib/payments/ledger';
+import { loadLedger } from '@/lib/payments/money';
+import { withJob } from '@/lib/payments/db';
 import { firstName } from '@/lib/domain/pipeline';
 import { relationIds } from '@/lib/calc';
 import { BUSINESS } from '@/lib/domain/rules';
@@ -16,16 +21,18 @@ const money = (c: number) => `$${(c / 100).toLocaleString('en-US', { minimumFrac
 /** Customer-facing pay page. First name and invoice number only: never an address. */
 export default async function PayPage({ params, searchParams }: { params: Promise<{ token: string }>; searchParams: Promise<{ e?: string }> }) {
   const { token } = await params; const { e } = await searchParams;
-  const c = payConfig();
-  if (!c.ok) return <Shell><p>Card payments are not set up yet. Call {BUSINESS.phone}.</p></Shell>;
-  const t = verifyPayToken(token, c.cfg.linkSecret);
-  if (!t) notFound();
   const store = getStore();
+  const ready = await paymentsReady(store);
+  const c = payConfig();
+  if (!ready.ok || !c.ok) return <Shell><p>Card payments are not set up yet. Call {BUSINESS.phone}.</p></Shell>;
+  const t = verifyPayToken(token, c.cfg.linkSecret);
+  if (!t || !(await linkIsActive(t.jobId, t.id))) notFound();
   const job = await store.get('jobs', t.jobId);
   if (!job) notFound();
   const customers = await store.list('customers');
   const cust = customers.find((x) => relationIds(job.customer).includes(x.id));
-  const plan = planCharge(job, await store.list('quotes'), await loadPricing(), t);
+  const ledger = await withJob(t.jobId, (client) => loadLedger(client, t.jobId));
+  const plan = planCharge({ ...job, paymentLedger: serializeLedger(ledger) }, await store.list('quotes'), await loadPricing(), t);
   return (
     <Shell>
       <p className="text-sm text-neutral-500">{firstName(cust?.name) ? `For ${firstName(cust?.name)}` : 'Payment'}</p>

@@ -5,6 +5,8 @@ import { loadPricing } from '@/lib/pricing';
 import { payConfig } from '@/lib/payments/config';
 import { stripeClient } from '@/lib/payments/server';
 import { applyStripeEvent } from '@/lib/payments/webhook';
+import { PaymentRejected } from '@/lib/payments/errors';
+import { paymentsReady } from '@/lib/payments/ready';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -27,10 +29,14 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: 'bad signature' }, { status: 400 });
   }
+  const store = getStore();
+  const ready = await paymentsReady(store);
+  if (!ready.ok) return NextResponse.json({ error: ready.error }, { status: ready.status });
   try {
-    const out = await applyStripeEvent({ store: getStore(), pricing: await loadPricing() }, event);
+    const out = await applyStripeEvent({ store, pricing: await loadPricing(), expected: { livemode: c.cfg.livemode, accountId: c.cfg.accountId } }, event);
     return NextResponse.json({ received: true, ...out });
   } catch (err) {
+    if (err instanceof PaymentRejected) return NextResponse.json({ error: err.message }, { status: 400 });
     console.error('[stripe-webhook] retry', event.type, event.id, err instanceof Error ? err.message : 'error');
     return NextResponse.json({ error: 'not applied; retry' }, { status: 500 });
   }

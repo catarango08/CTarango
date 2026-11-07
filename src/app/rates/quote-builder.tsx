@@ -239,9 +239,10 @@ export function QuoteBuilder({ rates, pricing }: { rates: Rate[]; pricing: Prici
 
               {quote.depositDue > 0 && (
                 <p className="mt-1 text-sm font-semibold text-oxide">
-                  Deposit {money(quote.depositDue)} before the work starts.
+                  Deposit {money(quote.depositDue)} shown. Not required to schedule.
                 </p>
               )}
+              {quote.unresolved.map((u) => <p key={u} className="mt-1 text-xs text-oxide">{u}</p>)}
             </>
           )}
         </div>

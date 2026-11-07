@@ -8,7 +8,7 @@ import { PhotoUploader } from '@/components/photo-uploader';
 import { PlayButton } from './play-button';
 import { JobField, JobNotes } from './job-notes';
 import { MaterialsPanel } from './materials-panel';
-import { closeoutStatus, depositRequired, gateTown } from '@/lib/domain/gates';
+import { closeoutStatus, depositShown, gateTown } from '@/lib/domain/gates';
 import { diagnosticFor, nextMove } from '@/lib/domain/playbook';
 import { LICENSE, MONEY } from '@/lib/domain/rules';
 import { forecastAccuracy, formatMinutes, planJob } from '@/lib/domain/forecast';
@@ -42,7 +42,7 @@ export default async function JobTicketPage({ params }: { params: Promise<{ id: 
   const verdict = gateTown(String(job.town ?? ''), territory);
   const move = nextMove(job);
   const closeout = closeoutStatus(job, photos);
-  const deposit = depositRequired(job.amount);
+  const deposit = depositShown(job);
   const diagnostic = diagnosticFor(job.type, await loadPricing());
   const plan = planJob(job, allJobs);
   const accuracy = forecastAccuracy(job);
@@ -384,12 +384,12 @@ export default async function JobTicketPage({ params }: { params: Promise<{ id: 
               <p className="text-xs text-[color:var(--ink-muted)]">{diagnostic.note}</p>
               <Row label="Material cost" value={money(totals.cost)} muted />
               <Row label="Material billed" value={money(totals.billed)} muted />
-              {deposit.required && (
+              {deposit.amount > 0 && (
                 <Row
-                  label="Deposit (50%)"
+                  label="Deposit"
                   value={money(deposit.amount)}
-                  tone={job.depositIn ? 'go' : 'hazard'}
-                  note={job.depositIn ? 'In' : 'Due before the work starts'}
+                  tone={job.depositIn ? 'go' : undefined}
+                  note={job.depositIn ? 'Recorded' : deposit.note}
                 />
               )}
               <div className="flex gap-2 pt-1">

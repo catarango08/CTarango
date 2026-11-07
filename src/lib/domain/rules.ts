@@ -28,9 +28,6 @@ export const BUSINESS = {
 
 export const MONEY = {
   materialsMarkup: 0.35,
-  /** Deposit required once the job total passes this. */
-  depositThreshold: 1500,
-  depositRate: 0.5,
   /** Known old-work condition. Not hidden damage. */
   oldWorkSurcharge: 0.25,
 } as const;

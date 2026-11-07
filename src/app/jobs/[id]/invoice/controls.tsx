@@ -7,7 +7,7 @@ export function PrintButton() {
   return <button type="button" className="btn" onClick={() => window.print()}>Print / save PDF</button>;
 }
 
-export function InvoiceControls({ jobId, jobStatus, due, byCard, coLinks, status, statuses, payLink, linkLabel, blockers, repriceNote, configMissing }: { jobId: string; jobStatus: string; due: number; byCard: boolean; coLinks: { id: string; label: string }[]; status: string; statuses: string[]; payLink: string; linkLabel: string; blockers: string[]; repriceNote: string; configMissing: string[] }) {
+export function InvoiceControls({ jobId, coId, jobStatus, due, byCard, coLinks, status, statuses, payLink, linkLabel, blockers, repriceNote, configMissing }: { jobId: string; coId: string; jobStatus: string; due: number; byCard: boolean; coLinks: { id: string; label: string }[]; status: string; statuses: string[]; payLink: string; linkLabel: string; blockers: string[]; repriceNote: string; configMissing: string[] }) {
   const router = useRouter();
   const [s, setS] = useState(status);
   const [copied, setCopied] = useState(false);
@@ -22,7 +22,11 @@ export function InvoiceControls({ jobId, jobStatus, due, byCard, coLinks, status
 
   const [blocking, setBlocking] = useState<string[]>([]);
   async function markPaid(method: string) {
-    await save({ invoiceStatus: 'Paid', status: 'Paid', paid: true, paymentMethod: method === 'Zelle' ? 'ACH' : method });
+    setMsg(null);
+    const res = await fetch('/api/payments/manual', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jobId, kind: coId ? 'co' : 'balance', ...(coId ? { coId } : {}), method }) });
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    setMsg(res.ok ? 'Recorded.' : (body.error ?? 'Could not record the payment'));
+    if (res.ok) router.refresh();
   }
   async function close() {
     setBlocking([]);
@@ -58,7 +62,7 @@ export function InvoiceControls({ jobId, jobStatus, due, byCard, coLinks, status
     <details className="panel p-3 text-sm"><summary className="min-h-12 cursor-pointer font-semibold">Invoice status · card pay link</summary>
     <div className="mt-2 flex flex-wrap items-end gap-3">
       <label>Invoice Status
-        <select className="input" value={s} onChange={(e) => { setS(e.target.value); void save({ invoiceStatus: e.target.value }); }}>
+        <select className="input" value={s} onChange={(e) => { if (e.target.value === 'Paid') { setMsg('Use Cash, Check, Zelle, or Card so the amount is recorded.'); return; } setS(e.target.value); void save({ invoiceStatus: e.target.value }); }}>
           {statuses.map((x) => <option key={x}>{x}</option>)}
         </select>
       </label>

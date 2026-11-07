@@ -3,7 +3,9 @@ import { getStore } from '@/lib/store';
 import { relationIds } from '@/lib/calc';
 import { loadPricing } from '@/lib/pricing';
 import { parseStored, priceOption } from '@/lib/domain/options';
+import { serviceCreditUsedByJob } from '@/lib/domain/service-credit';
 import { statusSideEffects } from '@/lib/domain/pipeline';
+import { noteJobMoneyChanged } from '@/lib/payments/sync';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,8 +31,10 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
   if (!option) return NextResponse.json({ error: 'Unknown option' }, { status: 400 });
   const addOns = (body.addOns ?? []).filter((a) => stored.doc.addOns.some((x) => x.id === a));
 
-  const priced = priceOption(stored.doc, option, await loadPricing(), addOns);
   const jobId = relationIds(quote.job)[0];
+  const used = jobId ? serviceCreditUsedByJob(await store.list('quotes'), jobId, id) : 0;
+  const priced = priceOption(stored.doc, option, await loadPricing(), addOns, { serviceCreditUsed: used });
+  const doc = { ...stored.doc, diagCredit: priced.serviceCreditApplied ?? 0 };
 
   try {
     const file = await store.upload({ name: `signature-${quote.name ?? id}.png`.replace(/[^\w.-]+/g, '-'), contentType: 'image/png', data: Buffer.from(match[1], 'base64') });
@@ -43,13 +47,14 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
       signature: [file],
       signedBy: body.signedBy.trim(),
       signedAt,
-      data: JSON.stringify({ doc: stored.doc, accepted: { optionId: option.id, addOns } }),
+      data: JSON.stringify({ doc, accepted: { optionId: option.id, addOns } }),
     });
     if (jobId) {
       const job = await store.get('jobs', jobId);
       const patch: Record<string, unknown> = { status: 'Approved', amount: priced.total, deposit: priced.deposit, signed: true, signedBy: body.signedBy.trim(), signature: [file] };
       const fx = statusSideEffects(job, patch);
       await store.update('jobs', jobId, fx.ok ? { ...patch, ...fx.extra } : patch);
+      await noteJobMoneyChanged(store, jobId, 'quote accepted');
     }
     return NextResponse.json({ quote: updated, total: priced.total, deposit: priced.deposit });
   } catch (err) {

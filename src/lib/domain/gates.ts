@@ -1,7 +1,6 @@
 import type { RecordValue } from '../schema';
 import { REQUIRED_PHOTO_STAGES } from '../schema';
 import { num } from '../calc';
-import { MONEY } from './rules';
 
 /* ------------------------------------------------------------------ *
  * The town gate — "Town first. Red or unknown → No-go."
@@ -184,11 +183,14 @@ export function closeoutStatus(job: RecordValue, photos: RecordValue[]): Closeou
 }
 
 /* ------------------------------------------------------------------ *
- * Deposit gate — "Deposit 50% over $1,500"
+ * Deposit — Oct 22 policy, shown from the amount stored on the job.
+ * It does not block scheduling. The 50% over $1,500 rule is not used.
  * ------------------------------------------------------------------ */
 
-export function depositRequired(amount: unknown): { required: boolean; amount: number } {
-  const total = num(amount);
-  if (total <= MONEY.depositThreshold) return { required: false, amount: 0 };
-  return { required: true, amount: Math.round(total * MONEY.depositRate * 100) / 100 };
+export function depositShown(job: { deposit?: unknown; id?: string }): { required: false; amount: number; note: string } {
+  return {
+    required: false,
+    amount: num(job.deposit),
+    note: 'Shown from the Oct 22 deposit policy. Not required to schedule.',
+  };
 }

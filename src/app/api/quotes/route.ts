@@ -4,6 +4,7 @@ import { getStore } from '@/lib/store';
 import { relationIds } from '@/lib/calc';
 import { loadPricing } from '@/lib/pricing';
 import { parseDoc, priceOption } from '@/lib/domain/options';
+import { serviceCreditUsedByJob } from '@/lib/domain/service-credit';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,8 +25,10 @@ export async function POST(request: Request) {
   const existing = (await store.list('quotes')).filter((q) => relationIds(q.job).includes(body.jobId!) && !isChangeOrder(q));
   const version = existing.reduce((m, q) => Math.max(m, Number(q.version) || 0), 0) + 1;
   const pricing = await loadPricing();
+  const used = serviceCreditUsedByJob(existing, body.jobId);
   const rec = doc.options.find((o) => o.recommended) ?? doc.options[0];
-  const priced = rec ? priceOption(doc, rec, pricing, doc.addOns.filter((a) => a.recommended).map((a) => a.id)) : null;
+  const priced = rec ? priceOption(doc, rec, pricing, doc.addOns.filter((a) => a.recommended).map((a) => a.id), { serviceCreditUsed: used }) : null;
+  if (priced) doc.diagCredit = priced.serviceCreditApplied ?? 0;
 
   try {
     for (const q of existing) {

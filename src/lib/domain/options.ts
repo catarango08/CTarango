@@ -1,6 +1,6 @@
 import { num, round2 } from '../calc';
-import { MONEY } from './rules';
 import { buildQuote, tripLabel, type QuoteLine, type QuoteResult } from './quote';
+import { NOV3_PRICING } from '@/config/pricing-2026-11-03';
 import type { Pricing, Tier, TripKind, ZoneNumber } from './pricing';
 import { ESTIMATE } from '@/config/assemblies';
 import { computeDeposit, type DepositResult } from './deposit';
@@ -66,6 +66,9 @@ export interface PricedOption {
   depositInfo?: DepositResult;
   /** Internal only — never render on a customer screen. */
   internal?: { hours: number; materialCost: number; effectiveRate: number };
+  /** Diagnostic credit actually applied after the once-per-job cap. */
+  serviceCreditApplied?: number;
+  serviceCreditNote?: string;
 }
 
 export function emptyDoc(tier: Tier = 'residential', zone: ZoneNumber = 1): QuoteDoc {
@@ -75,11 +78,13 @@ export function emptyDoc(tier: Tier = 'residential', zone: ZoneNumber = 1): Quot
   return { tier, zone, oldWork: false, options: [blank('good', 'Good'), blank('better', 'Better', true), blank('best', 'Best')], addOns: [], discount: null, scope: '' };
 }
 
+/** Older quotes with no furnish/generator classification. The 50% rule is not applied. */
 export function depositFor(total: number): number {
-  return total > MONEY.depositThreshold ? round2(total * MONEY.depositRate) : 0;
+  void total;
+  return 0;
 }
 
-export function priceOption(doc: QuoteDoc, option: QuoteOptionDef, pricing: Pricing, selectedAddOns: string[] = []): PricedOption {
+export function priceOption(doc: QuoteDoc, option: QuoteOptionDef, pricing: Pricing, selectedAddOns: string[] = [], opts: { serviceCreditUsed?: number } = {}): PricedOption {
   const addOns = doc.addOns.filter((a) => selectedAddOns.includes(a.id));
   const quoteLines: QuoteLine[] = [
     ...option.lines.map((l, i) => ({ id: `${l.rateId}-${i}`, name: l.name, price: num(l.price), quantity: num(l.quantity, 1), kind: l.kind })),
@@ -87,7 +92,7 @@ export function priceOption(doc: QuoteDoc, option: QuoteOptionDef, pricing: Pric
   ];
   if (num(option.materialsCost) > 0) quoteLines.push({ id: 'mat', name: 'Materials', price: num(option.materialsCost), quantity: 1, kind: 'material' });
 
-  const quote = buildQuote({ lines: quoteLines, pricing, tier: doc.tier, zone: doc.zone, trip: option.trip, extraHours: option.extraHours, oldWork: doc.oldWork });
+  const quote = buildQuote({ lines: quoteLines, pricing, tier: doc.tier, zone: doc.zone, trip: option.trip, extraHours: option.extraHours, oldWork: doc.oldWork, creditAlreadyUsed: opts.serviceCreditUsed });
 
   const lines: PricedLine[] = [];
   for (const l of option.lines) lines.push({ label: l.quantity > 1 ? `${l.name} × ${l.quantity}` : l.name, amount: round2(num(l.price) * num(l.quantity, 1)), kind: 'work' });
@@ -117,8 +122,12 @@ export function priceOption(doc: QuoteDoc, option: QuoteOptionDef, pricing: Pric
     visitTrip = round2(pricing.zones[doc.zone] * Math.max(1, num(doc.visits, 1)));
     lines.push({ label: num(doc.visits, 1) > 1 ? `Trip × ${num(doc.visits, 1)} visits` : 'Trip', amount: visitTrip, kind: 'trip' });
   }
-  const diag = round2(num(doc.diagCredit));
-  if (diag) lines.push({ label: 'Diagnostic credited (approved today)', amount: -diag, kind: 'discount' });
+  const cap = doc.tier === 'residential' ? NOV3_PRICING.serviceCallCredit : pricing[doc.tier].trip.day;
+  const room = Math.max(0, cap - Math.max(0, num(opts.serviceCreditUsed)));
+  const diagAsked = round2(num(doc.diagCredit));
+  const diag = Math.min(diagAsked, room);
+  const serviceCreditNote = diagAsked > diag ? (num(opts.serviceCreditUsed) > 0 ? 'Service-call credit was already used on this job.' : `Credit capped at $${cap}.`) : undefined;
+  if (diag) lines.push({ label: 'Diagnostic credited (once per job)', amount: -diag, kind: 'discount' });
   const gross = round2(quote.total + itemsLabor + itemsMat + visitTrip - diag);
 
   const discount = doc.discount && num(doc.discount.amount) > 0 ? Math.min(round2(num(doc.discount.amount)), gross) : 0;
@@ -130,9 +139,10 @@ export function priceOption(doc: QuoteDoc, option: QuoteOptionDef, pricing: Pric
   const internal = { hours, materialCost, effectiveRate: hours > 0 ? round2((total - materialCost - visitTrip) / hours) : 0 };
   if (doc.furnish) {
     const depositInfo = computeDeposit({ total, materials: materialCost, laborOnly, generator: doc.generator || gear > 0, generatorGear: gear });
-    return { option, quote, lines, discount, total, deposit: depositInfo.deposit, depositInfo, internal };
+    return { option, quote, lines, discount, total, deposit: depositInfo.deposit, depositInfo, internal, serviceCreditApplied: diag, serviceCreditNote };
   }
-  return { option, quote, lines, discount, total, deposit: depositFor(total), internal };
+  const unclassified = total > 0 ? 'Deposit classification (materials, labor-only, generator) is missing. The old 50% over $1,500 rule is not used.' : undefined;
+  return { option, quote, lines, discount, total, deposit: 0, internal, serviceCreditApplied: diag, serviceCreditNote: [serviceCreditNote, unclassified].filter(Boolean).join(' ') || undefined };
 }
 
 export function parseDoc(raw: unknown): QuoteDoc | null {

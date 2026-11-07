@@ -1,6 +1,11 @@
 import { cardFeeCents, computeInvoice } from '@/lib/domain/invoice';
 import { payConfig } from '@/lib/payments/config';
-import { signPayToken } from '@/lib/payments/token';
+import { issuePayLink } from '@/lib/payments/checkout';
+import { paymentsReady } from '@/lib/payments/ready';
+import { getStore } from '@/lib/store';
+import { withJob } from '@/lib/payments/db';
+import { loadLedger } from '@/lib/payments/money';
+import { serializeLedger } from '@/lib/payments/ledger';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { findById, loadAll } from '@/lib/data';
@@ -29,8 +34,12 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
   const stored = accepted ? parseStored(accepted.data) : null;
   const cust = customers.find((c) => relationIds(job.customer).includes(c.id));
 
-  // One calculation shared with card checkout (src/lib/domain/invoice.ts), so the page and Stripe can't disagree.
-  const inv = computeInvoice(job, quotes, pricing, { coId: sp.co });
+  // One calculation shared with card checkout. Credit comes from the payment database when it is ready.
+  const store = getStore();
+  const ready = await paymentsReady(store);
+  const ledger = ready.ok ? await withJob(id, (client) => loadLedger(client, id)) : undefined;
+  const jobView = ledger ? { ...job, paymentLedger: serializeLedger(ledger) } : job;
+  const inv = computeInvoice(jobView, quotes, pricing, { coId: sp.co, ledger });
   const lines = inv.lines;
   const total = inv.totalCents / 100;
   const coOnly = inv.coOnly;
@@ -42,10 +51,11 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
   const byCard = sp.card === '1' || String(job.paymentMethod) === 'Card';
   const fee = byCard ? cardFeeCents(inv.balanceCents) / 100 : 0;
   const due = Math.round((subtotal + fee) * 100) / 100;
-  // Card pay link for exactly this balance (old fixed Stripe links are not used for job invoices).
+  // Card pay link for exactly this balance. The legacy Pay Link field (fixed Stripe links) is not used.
   const pc = payConfig();
   const target = coOnly ? { jobId: id, kind: 'co' as const, coId: coOnly.id } : { jobId: id, kind: 'balance' as const };
-  const payUrl = pc.ok && inv.blockers.length === 0 && inv.balanceCents > 0 ? `${pc.cfg.baseUrl}/pay/${signPayToken(target, pc.cfg.linkSecret)}` : '';
+  const issued = pc.ok && ready.ok && inv.blockers.length === 0 && inv.balanceCents > 0 ? await issuePayLink(store, pc.cfg, target) : null;
+  const payUrl = issued?.ok ? issued.url : '';
   const payLink = payUrl;
   const status = String(job.invoiceStatus ?? 'Draft');
 
@@ -56,7 +66,7 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
         <PrintButton />
       </div>
       <div className="no-print mb-4">
-        <InvoiceControls jobId={id} jobStatus={String(job.status ?? '')} due={due} byCard={byCard} coLinks={separateCOs.map((c) => ({ id: c.id, label: `Change order ${c.co.n} invoice (${money(c.total)})` }))} status={status} statuses={[...INVOICE_STATUSES]} payLink={payLink} linkLabel={CLOSE.payment.linkLabel} blockers={inv.blockers} repriceNote={inv.repriceNote ?? ''} configMissing={pc.ok ? [] : pc.missing} />
+        <InvoiceControls jobId={id} coId={coOnly?.id ?? ''} jobStatus={String(job.status ?? '')} due={due} byCard={byCard} coLinks={separateCOs.map((c) => ({ id: c.id, label: `Change order ${c.co.n} invoice (${money(c.total)})` }))} status={status} statuses={[...INVOICE_STATUSES]} payLink={payLink} linkLabel={CLOSE.payment.linkLabel} blockers={inv.blockers} repriceNote={inv.repriceNote ?? ''} configMissing={ready.ok ? [] : ready.missing} />
       </div>
       <article className="invoice mx-auto max-w-2xl bg-white p-6 text-neutral-900 shadow print:shadow-none">
         <header className="flex flex-wrap items-start justify-between gap-4 border-b-4 border-[#f2b705] pb-4">

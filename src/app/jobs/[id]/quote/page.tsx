@@ -7,6 +7,7 @@ import { relationIds } from '@/lib/calc';
 import { emptyDoc, parseStored } from '@/lib/domain/options';
 import { QuoteBuilder, type RateOpt } from './builder';
 import { diagnosticFor } from '@/lib/domain/playbook';
+import { serviceCreditUsedByJob } from '@/lib/domain/service-credit';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,7 +37,7 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
         <h1 className="min-w-0 break-words text-lg font-semibold">Quote · {String(job.name ?? '')}</h1>
         <Link className="btn shrink-0" href={`/jobs/${id}/onsite`}>← Job</Link>
       </div>
-      <QuoteBuilder jobId={id} initial={doc} pricing={pricing} rates={flats} customer={String(cust?.name ?? '')} diagnostic={diag.fee} foundDefault={String(job.diagnosis ?? job.siteConditions ?? '')} latestQuoteId={quotes[0]?.id} />
+      <QuoteBuilder jobId={id} initial={doc} pricing={pricing} rates={flats} customer={String(cust?.name ?? '')} diagnostic={diag.fee} foundDefault={String(job.diagnosis ?? job.siteConditions ?? '')} latestQuoteId={quotes[0]?.id} serviceCreditUsed={serviceCreditUsedByJob(allQuotes, id)} />
       <details className="panel mt-6 p-4">
         <summary className="min-h-12 cursor-pointer text-sm font-semibold uppercase tracking-wider">Corey only · objections</summary>
         <ul className="mt-2 space-y-2 text-sm">

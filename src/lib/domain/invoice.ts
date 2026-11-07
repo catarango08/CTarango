@@ -4,7 +4,7 @@ import { parseStored, priceOption } from './options';
 import type { Pricing } from './pricing';
 import type { RecordValue } from '../schema';
 import { DEPOSIT_POLICY } from '@/config/deposit-policy';
-import { hasProcessing, parseLedger, sumCredited } from '../payments/ledger';
+import { creditedCents, hasProcessing, parseLedger, sumCredited, type LedgerEntry } from '../payments/ledger';
 
 /**
  * The one invoice calculation. Used by the invoice page AND by card checkout,
@@ -33,15 +33,16 @@ export interface InvoiceCalc {
   blockers: string[];
 }
 
-export function computeInvoice(job: RecordValue, quotes: RecordValue[], pricing: Pricing, opts: { coId?: string } = {}): InvoiceCalc {
+export function computeInvoice(job: RecordValue, quotes: RecordValue[], pricing: Pricing, opts: { coId?: string; ledger?: LedgerEntry[] } = {}): InvoiceCalc {
   const id = job.id;
   const blockers: string[] = [];
   const mine = quotes.filter((q) => relationIds(q.job).includes(id));
   const accepted = mine.filter((q) => String(q.status) === 'Accepted' && !isChangeOrder(q)).sort((a, b) => Number(b.version) - Number(a.version))[0];
   const stored = accepted ? parseStored(accepted.data) : null;
   const signedCOs = mine.filter((q) => String(q.status) === 'Accepted').map((q) => ({ q, co: parseCO(q.data) })).filter((x) => x.co).map((x) => ({ id: x.q.id, co: x.co!, total: coTotal(x.co!) }));
+  const ledger = opts.ledger ?? parseLedger(job.paymentLedger);
+  const allocatedSeparately = new Set(ledger.filter((e) => e.kind === 'co' && creditedCents(e) > 0 && e.coId).map((e) => e.coId as string));
   const separate = signedCOs.filter((c) => c.total > CO_DUE_ON_APPROVAL);
-  const ledger = parseLedger(job.paymentLedger);
   let lines: { label: string; amount: number }[] = [];
   let totalCents = 0;
   let repriceNote: string | undefined;
@@ -49,6 +50,9 @@ export function computeInvoice(job: RecordValue, quotes: RecordValue[], pricing:
   if (opts.coId) {
     const c = signedCOs.find((x) => x.id === opts.coId);
     if (!c) return { lines: [], totalCents: 0, depositCents: 0, depositCreditCents: 0, paidOnlineCents: 0, balanceCents: 0, separateCOs: [], blockers: ['Change order not found or not signed'] };
+    if (c.total <= CO_DUE_ON_APPROVAL && !allocatedSeparately.has(c.id)) {
+      return { lines: [], totalCents: toCents(c.total), depositCents: 0, depositCreditCents: 0, paidOnlineCents: 0, balanceCents: 0, separateCOs: [], coOnly: { id: c.id, n: c.co.n }, blockers: ['This change order is on the main invoice and cannot be collected separately'] };
+    }
     lines = [{ label: `Change order ${c.co.n} — due on approval`, amount: NaN }, ...c.co.lines.map((l) => ({ label: `${l.name}${l.qty > 1 ? ` × ${l.qty}` : ''}`, amount: l.price * l.qty }))];
     totalCents = toCents(c.total);
     const paid = sumCredited(ledger, 'co', c.id);
@@ -71,14 +75,15 @@ export function computeInvoice(job: RecordValue, quotes: RecordValue[], pricing:
     totalCents = toCents(num(job.amount));
   }
   for (const c of signedCOs.filter((c) => c.total <= CO_DUE_ON_APPROVAL)) {
+    if (allocatedSeparately.has(c.id)) continue; // already collected on its own receipt — do not bill it again
     lines.push({ label: `Change order ${c.co.n}: ${c.co.lines.map((l) => l.name).join(', ')}`, amount: c.total });
     totalCents += toCents(c.total);
   }
+  // Requested deposit (job.deposit) is what we ask for. Credit is only explicit receipts.
   const depositCents = toCents(num(job.deposit));
-  // "Deposit in" is the single source of truth for the deposit credit (set by hand or by a confirmed
-  // deposit payment). Deposit ledger entries are NOT also subtracted, so the deposit can't be credited twice.
-  const depositCreditCents = depositCents > 0 && job.depositIn === true ? Math.min(depositCents, totalCents) : 0;
+  const depositCreditCents = Math.min(sumCredited(ledger, 'deposit'), totalCents);
   const paidOnlineCents = sumCredited(ledger, 'balance');
+  if (ledger.some((e) => e.needsReview || e.status === 'review')) blockers.push('A payment needs review before another card charge');
   if (hasProcessing(ledger, 'balance')) blockers.push('A card payment for this invoice is still processing or under review');
   if (hasProcessing(ledger, 'deposit')) blockers.push('A deposit card payment is still processing or under review');
   if (String(job.invoiceStatus) === 'Partial' && !ledger.some((e) => e.kind === 'balance' && e.status === 'paid')) blockers.push('Invoice is marked Partial but the amount paid is not recorded; record it before taking a card payment');

@@ -1,6 +1,7 @@
 import { num, round2 } from '../calc';
 import { MONEY } from './rules';
 import { NOV3_PRICING } from '@/config/pricing-2026-11-03';
+import { DEPOSIT_POLICY } from '@/config/deposit-policy';
 import { NO_TRIP_FLATS, billableOvertime, fallbackPricing, zoneAddForTrip, type Pricing, type Tier, type TripKind, type ZoneNumber } from './pricing';
 
 /**
@@ -38,6 +39,8 @@ export interface QuoteInput {
   oldWork?: boolean;
   /** Diagnostic already collected and credited against the repair. */
   creditDiagnostic?: number;
+  /** Service-call credit already used on another accepted version of this job. */
+  creditAlreadyUsed?: number;
 }
 
 export interface QuoteResult {
@@ -107,8 +110,10 @@ export function buildQuote(input: QuoteInput): QuoteResult {
     notes.push(`${TRIP_LABEL[tripKind]} includes the Zone 1 trip and up to ${rates.includedHours} hour${rates.includedHours === 1 ? '' : 's'}.`);
     if (zoneAdd) notes.push(`Zone ${zone} adds $${zoneAdd}.`);
     if (hours > 0) {
+      const entered = hours;
       const b = billableOvertime(tier, tripKind, hours);
-      if (b.rounded) notes.push(`${hours} h rounds up to ${b.hours} h ($${round2(hourlyRate / 2)} per half-hour).`);
+      if (b.rounded && tripKind === 'day') notes.push(`${entered} h rounds up to ${b.hours} h ($${round2(hourlyRate / 2)} per half-hour).`);
+      if (b.rounded && tripKind !== 'day') notes.push(`${entered} h rounds up to ${b.hours} full hour${b.hours === 1 ? '' : 's'}.`);
       if (b.incrementUnresolved) notes.push('Billing increment for this call type was not stated; hours bill as entered.');
       hours = b.hours;
       if (tier === 'residential') notes.push("Time past the included hours bills only with the customer's OK.");
@@ -127,16 +132,25 @@ export function buildQuote(input: QuoteInput): QuoteResult {
   const oldWorkAdd = input.oldWork ? round2((flats + materialsCharged + laborCharged) * MONEY.oldWorkSurcharge) : 0;
   if (oldWorkAdd) notes.push(`Old work +${MONEY.oldWorkSurcharge * 100}%: a known condition, flagged on the first look.`);
 
-  // The service call is credited once, and never more than the service call itself.
+  // The service call is credited once per job, and never more than the service call itself.
   const creditCap = tier === 'residential' ? NOV3_PRICING.serviceCallCredit : rates.trip.day;
+  const already = Math.min(creditCap, Math.max(0, round2(num(input.creditAlreadyUsed))));
   const askedCredit = round2(num(input.creditDiagnostic));
-  const diagnosticCredit = Math.min(askedCredit, creditCap);
-  if (askedCredit > creditCap) notes.push(`Credit capped at $${creditCap} (the service call).`);
-  if (diagnosticCredit) notes.push(`Service call $${diagnosticCredit} credited toward the approved repair (once).`);
+  const diagnosticCredit = Math.min(askedCredit, Math.max(0, creditCap - already));
+  if (askedCredit > diagnosticCredit) notes.push(already > 0 ? `Service-call credit already used on this job ($${already}).` : `Credit capped at $${creditCap} (the service call).`);
+  if (diagnosticCredit) notes.push(`Service call $${diagnosticCredit} credited toward the approved repair (once per job).`);
 
   const total = round2(Math.max(0, subtotal + oldWorkAdd - diagnosticCredit));
-  const depositDue = total > MONEY.depositThreshold ? round2(total * MONEY.depositRate) : 0;
-  if (depositDue) notes.push(`Deposit $${depositDue.toLocaleString()} (${MONEY.depositRate * 100}%) before the work starts.`);
+  // Oct 22 policy. The rate-book builder does not know labor-only vs generator, so only the
+  // materials rule is applied here. The old 50% over $1,500 rule is not used.
+  let depositDue = 0;
+  if (materialsCost > DEPOSIT_POLICY.materialsAtSigningOver) {
+    depositDue = round2(Math.min(total, materialsCost));
+    notes.push(`Materials over $${DEPOSIT_POLICY.materialsAtSigningOver}: $${depositDue.toLocaleString()} is shown at signing. Not required to schedule.`);
+    unresolved.push('Only the materials rule was applied. Labor-only, generator, and installment rules need the on-site estimate.');
+  } else if (total > 0) {
+    unresolved.push('Deposit classification was not provided. The old 50% over $1,500 rule is not used.');
+  }
 
   return {
     flats,

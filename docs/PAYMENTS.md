@@ -1,78 +1,76 @@
-# Card payments (Stripe Checkout) and Nov 3 pricing
+# Card payments (Stripe Checkout) and pricing
 
-## How it works
-1. On the invoice (or a change-order invoice), Corey taps **Copy customer pay link**. The link is `/pay/<token>`.
-   - The token is HMAC-signed with `PAY_LINK_SECRET`. It names the job and what to pay (deposit, balance, or one change order). It carries **no amount**.
-   - The customer quote's deposit button uses the same kind of link, for the deposit.
-2. The customer opens the link. The server recomputes what's owed from Notion and shows it: first name, invoice number, amount, the 2.5% card fee, and the total.
-   - No address is shown, and none is sent to Stripe.
-   - The customer taps **Pay** (a POST), and the server creates (or reuses) a Stripe Checkout Session for exactly that amount. The session is card only and expires in 1 hour.
-3. Stripe sends a webhook to `/api/stripe/webhook`. The signature is verified on the raw body, and old signatures (more than 5 minutes) are rejected.
-   - Only the webhook writes payments to Notion, on the job's **Payment Ledger**, **Amount Paid Online**, **Invoice Status**, **Paid** and **Deposit in** fields.
-   - The return page is read-only and never marks anything paid.
+This is not live. Nothing in the repo takes a real payment, creates a webhook, or writes to Notion or Stripe. Corey still has to do the setup below before a card can be charged.
 
-## The one invoice calculation
-`src/lib/domain/invoice.ts` → `computeInvoice()` is used by both the invoice page and checkout:
-- The **total** is the accepted quote's **signed total**. A re-price at today's rates is shown to Corey but never charged. Small change orders are added; change orders over $300 are billed separately.
-- The **deposit** is credited exactly once, and only when **Deposit in** is checked. A paid deposit in the ledger turns Deposit in on and is not subtracted a second time.
-- **Confirmed online payments** (net of refunds) are subtracted.
-- The **card fee** is 2.5% of the balance, rounded to the cent. It's applied once, as its own line, and is never credited toward the invoice.
+## Source of truth
 
-## Safeguards
-| Risk | Guard |
-|---|---|
-| Duplicate checkout or double tap | One open session per job and target is stored on the job and reused. The Stripe idempotency key covers job, target, amount and payment history. If the amount changes, the stale session is expired first. |
-| Charging twice | No checkout when the invoice is Paid, the balance is 0, or a payment is processing or under review. A completed-but-unpaid (delayed) session blocks a new one. |
-| Replayed or duplicate events | Ledger entries are keyed by PaymentIntent, and event ids already seen are skipped. Totals are recomputed from the entries, never incremented, and refunds use Stripe's cumulative `amount_refunded`. |
-| Delayed payment | `completed` with `payment_status: unpaid` is recorded as **processing**, not paid. Only `async_payment_succeeded` pays it, and `async_payment_failed` records **failed** with no credit. |
-| Expired session | The pointer is cleared. Nothing is credited. |
-| Refund | Credit is reduced pro rata, Paid reverts to Sent or Partial, and a refunded app-set deposit unchecks Deposit in. |
-| Amount tampering | Amounts are computed server-side only. The webhook checks that `amount_total` equals base + fee from metadata, in USD. A mismatch goes to **review** and isn't credited. |
-| Notion drops a field (schema gap) | The webhook reads the write back, and if the ledger didn't persist it returns 500 so Stripe retries. |
-| Internal endpoints | `/api/payments/link` sits behind the passcode, and it refuses in production if `APP_PASSCODE` is unset. Only `/pay/*` and `/api/stripe/webhook` are public. |
-| Data sent to Stripe | Metadata holds only the job id, kind, cents, invoice number and an app tag. No address, email or phone. |
+Money lives in a dedicated PostgreSQL database (`PAYMENT_DATABASE_URL`), not in Notion and not in the demo store.
 
-**Known limit:** within one server instance, webhook writes are serialized per job. Two different payments for one job landing at the same moment on two instances could race on the Notion write. This is very unlikely, because a second checkout is blocked while one is open or processing.
+- Each job is locked with `SELECT … FOR UPDATE` so two servers cannot lose an event.
+- Stripe event ids and payment intents are unique.
+- Obligation revisions are insert-only. Editing the requested deposit or the signed total creates a new revision and supersedes open checkouts.
+- Checkout params, including `expires_at` and the idempotency key, are saved before Stripe is called. A retry sends that same body. An expired session uses a new generation and a new key.
+- Notion receives an ordered outbox projection (ledger, amount paid, deposit flag, invoice status). If Notion drops a field, the webhook returns 500 and the next delivery repairs the projection. Notion is a display. It is not the ledger.
+- Card checkout is refused unless the passcode, Stripe config, account id, and migrated payment schema are all present. The demo store cannot take a payment.
 
-## Configuration (env names, set in Vercel, never in the repo)
-Required for card checkout:
-- `STRIPE_SECRET_KEY`: a restricted key with Checkout Sessions write and read is preferred. Use a test key in Preview.
-- `STRIPE_WEBHOOK_SECRET`: the `whsec_…` from the endpoint below.
-- `PAY_LINK_SECRET`: 32 or more random characters. Rotating it invalidates the pay links already sent.
-- `APP_BASE_URL`: the https production URL.
-- `APP_PASSCODE`: already required. Pay links are refused in production without it.
+## What a customer can pay
 
-Optional, only after Chief supplies real ids: `STRIPE_PRODUCT_INVOICE`, `STRIPE_PRODUCT_DEPOSIT`, `STRIPE_PRODUCT_CHANGE_ORDER` and `STRIPE_PRODUCT_CARD_FEE`. These must be `prod_…` ids; anything else is ignored.
-- Fixed **price** ids can't express a variable invoice balance, so the app uses `price_data` with the server-computed amount on the product.
+1. A signed link `/pay/<token>` names the job and deposit, balance, or one change order. It carries no amount. It expires in 7 days and can be revoked when the invoice changes.
+2. The server computes the amount from the signed total plus explicit receipts. The return page only reads the payment database. It never marks anything paid.
+3. Checkout is card-only via `allowed_payment_method_types: ['card']` (not `payment_method_types`), because the 2.5% line is a card fee. The fee is its own line and is never credited.
+4. Metadata sent to Stripe is the job id, kind, cents, invoice number, and attempt id. No street address, email, or phone.
 
-Stripe dashboard (Corey or Chief, not the app):
-1. Add a webhook endpoint at `https://<production>/api/stripe/webhook` with these events:
-   - `checkout.session.completed`
-   - `checkout.session.async_payment_succeeded`
-   - `checkout.session.async_payment_failed`
-   - `checkout.session.expired`
-   - `charge.refunded`
-2. Notion: run `npm run notion:bootstrap`, which adds the Jobs fields **Amount Paid Online**, **Payment Ledger** and **Checkout Sessions**. No Rate Book rows are touched.
+## Credit rules
+
+- Collected credit is the sum of explicit receipts (card, cash, check, Zelle). The Deposit checkbox and the editable Deposit amount are not the credit.
+- A full refund returns all principal and the fee.
+- Any other refund needs `principal_cents` and `refund_fee_cents` on the charge or refund metadata, adding up to Stripe's cumulative refund. Otherwise the payment stays in review and the previous credit is left alone. The split is not guessed.
+- A paid entry stays paid if a failure notice arrives later. A refund is the way money comes back.
+- A webhook must match livemode, and the account when Stripe sends one, plus currency and amount against the stored checkout. A stale or excess payment is review, not an automatic paid invoice.
+- Change orders of $300 or less stay on the main invoice. They cannot also be collected on their own. If one was already paid on its own, the main invoice does not bill it again.
+
+## Deposit policy (Oct 22, 2026)
+
+The old "50% over $1,500" rule is not used. `computeDeposit` in `src/lib/domain/deposit.ts` is the shared helper (`src/config/deposit-policy.ts`):
+
+- Materials or rentals over $300 are due at signing.
+- Contractor-furnished jobs of $1,000 or more: the greater of 30% or materials and rentals.
+- Jobs over $5,000: 30/40/30, and signing is never below materials. If that split cannot fit, it is flagged.
+- Labor-only: the greater of $500 or 10%, then bills every two weeks. If another rule is also higher, that higher amount is shown and flagged.
+- Generators: the greater of 50% or the unit plus transfer switch. A missing gear cost is flagged.
+- The amount is shown. Scheduling is not blocked on it.
 
 ## Pricing (Nov 3, 2026)
-`src/config/pricing-2026-11-03.ts` is the authority for residential pricing and zones. The stale Rate Book ($160) can't override it, and no Rate Book row is edited. Commercial still reads the Rate Book.
 
-### Unresolved (not guessed)
-1. **Zone 2/3 supplements on after-hours, emergency and holiday calls.** Nothing is added; the quote is flagged "not decided". The signed total is what's billed.
-2. **Billing increment for special-call overtime.** Only the day rate's $75 half-hour was stated, so special-call hours bill as entered and are flagged.
-3. **Commercial rates.** Nov 3 doesn't cover them, so they're unchanged.
-4. **"Only with the customer's OK"** for time past 2 hours. Quotes say so, and accepting the quote counts as the OK. There is no separate approval capture.
-5. **Change-order and estimator labor** use the project rate ($90). Should change-order T&M on a service call be $150?
-6. **The $250 credit "once".** It's capped at $250 per quote. There's no cross-quote tracking.
-7. **Standalone zone fee for no-trip project work.** It's still $70 / $115 / $155, and the 45 / 85 differences match Nov 3.
+`src/config/pricing-2026-11-03.ts` is the residential authority. The app does not write Rate Book rows. The stale $160 row cannot change residential prices. Job invoices use the accepted signed total, not a re-price, and not the legacy fixed Pay Link field.
 
-### Card-fee and deposit audit (policy not changed)
-- **Card fee:** 2.5% is applied once, on the balance after the deposit credit. It is never charged on the fee and never credited.
-  - The invoice page, the pay page and Stripe all use `cardFeeCents()`, so they match to the cent.
-  - The customer quote's deposit button now computes the fee the same way. Before, it added 0 when the quote had no estimator deposit info.
-- **Two deposit rules exist** and aren't reconciled. I left both as they were and am asking Corey:
-  - Estimator quotes use the Oct 22 policy (`src/config/deposit-policy.ts`).
-  - Older quote docs use `MONEY` (50% over $1,500), and the Jobs "Deposit in" help text also says 50% over $1,500.
-- **Deposit card fee:** the deposit is credited in full, and its 2.5% fee isn't, per TERMS.
-- **The legacy "Pay Link" field** (fixed Stripe links, such as the old $175 link) is no longer used for job invoices or deposits.
-- **Manual tools are unchanged:** the "Cash / Check / Zelle / Card" mark-paid buttons, the in-person "Add 2.5% fee" toggle, and the Invoice Status select.
+- Service call $250 includes Zone 1 and 2 hours. Zone 2 is +$45 and Zone 3 is +$85 on day calls and on after-hours, holiday, and same-day special calls.
+- Day overtime is $150/hr, billed in $75 half-hours, only with the customer's OK.
+- After-hours $375, same-day special $450, and holiday $500 include 2 hours, then full-hour blocks at $225, $225, and $300.
+- Project, extra repair, and change-order labor is $90/hr. Parts are separate.
+- The $250 service-call credit applies once per job across quote versions.
+- Commercial rates are unchanged.
+
+## Setup before any real card (not done by this change)
+
+Set these in the host's secret store. Do not commit them.
+
+- `PAYMENT_DATABASE_URL` — a Postgres database used only for payments. Apply happens on startup (`schema_migrations` version 1). Take a backup before pointing this at anything that already has data.
+- `APP_PASSCODE` — required. Signed pay links are refused when it is unset. Staff pages still use the passcode cookie. Customers do not get that cookie; they need a valid unexpired link.
+- `STRIPE_SECRET_KEY` — a restricted key (`rk_`) is preferred over a secret key. Use a test key until Corey says otherwise.
+- `STRIPE_ACCOUNT_ID` — `acct_…` for this Stripe account. An event that names a different account is rejected.
+- `STRIPE_WEBHOOK_SECRET` — from the endpoint Corey creates. The app does not create the endpoint.
+- `PAY_LINK_SECRET` — 32+ random characters. Rotating it invalidates links.
+- `APP_BASE_URL` — https origin, no trailing slash.
+
+Optional product ids, only after they exist: `STRIPE_PRODUCT_INVOICE`, `STRIPE_PRODUCT_DEPOSIT`, `STRIPE_PRODUCT_CHANGE_ORDER`, `STRIPE_PRODUCT_CARD_FEE`.
+
+Webhook events to subscribe, when Corey is ready: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `charge.refunded`.
+
+Dashboard payment methods should leave card enabled. The code also filters Checkout to card.
+
+Notion bootstrap (`npm run notion:bootstrap`) can add the display fields. Do not run it against the live workspace until Corey asks. It does not change Rate Book prices. Do not edit Rate Book rows.
+
+## Still not verified
+
+No live Stripe call, no live webhook, and no live Notion write was made. Tests use a fake Stripe client and local Postgres.

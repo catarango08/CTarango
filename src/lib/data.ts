@@ -195,11 +195,11 @@ function buildAlerts(input: {
         href: `/jobs/${job.id}`,
       });
     }
-    if (String(job.status) === 'Approved' && num(job.amount) > 1500 && !job.depositIn) {
+    if (String(job.status) === 'Approved' && num(job.deposit) > 0 && !job.depositIn) {
       alerts.push({
         severity: 'watch',
-        title: `Deposit not collected on ${job.name}`,
-        detail: `$${num(job.amount).toLocaleString()} job. 50% is due before the work starts.`,
+        title: `Deposit not recorded on ${job.name}`,
+        detail: `$${num(job.deposit).toLocaleString()} is shown from the Oct 22 policy. Scheduling is not blocked.`,
         href: `/jobs/${job.id}`,
       });
     }

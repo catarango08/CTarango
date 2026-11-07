@@ -13,12 +13,10 @@
  *   $225/hr ($300/hr holiday).
  * - Project / flat-rate labor $90/hr.
  *
- * UNRESOLVED (do not guess, see docs/PAYMENTS.md):
- * - Whether the Zone 2/3 supplements apply to after-hours, emergency and holiday calls.
- *   The app adds nothing automatically and flags those calls for a manual decision.
- * - The billing increment for special-call overtime. Only the day rate's half-hour
- *   increment was stated, so special-call hours bill as entered and are flagged.
- * - Commercial rates. Not covered by Nov 3; commercial keeps its existing rates.
+ * Zone 2 is +$45 and Zone 3 is +$85 on every residential call, including after-hours,
+ * emergency, and holiday. Special-call overtime bills in full-hour blocks.
+ *
+ * Commercial rates are not covered by Nov 3 and stay on the Rate Book.
  */
 export const NOV3_PRICING = {
   effective: '2026-11-03',

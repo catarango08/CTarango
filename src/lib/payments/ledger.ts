@@ -1,27 +1,30 @@
 /**
- * Online payment ledger, stored as JSON on the job ("Payment Ledger").
- * Keyed by Stripe PaymentIntent (or Checkout Session when there is none), so a
- * replayed or duplicated webhook event can never add a payment twice. Totals are
- * always recomputed from the entries (set semantics), never incremented.
- * All money is integer cents.
+ * Display shape of a payment. The source of truth is the payment database.
+ * The JSON on the job is a projection so a person can read it in Notion.
+ * All money is integer cents. Credit is explicit principal, never a guessed fee split.
  */
 export type PayKind = 'deposit' | 'balance' | 'co';
 export type EntryStatus = 'processing' | 'paid' | 'failed' | 'review';
 
 export interface LedgerEntry {
-  key: string; // payment_intent id, else checkout session id
+  key: string; // payment_intent id, manual receipt id, or checkout session id
   session: string;
   kind: PayKind;
   coId?: string;
   status: EntryStatus;
-  baseCents: number; // what is credited toward the invoice / deposit
-  feeCents: number; // 2.5% card fee, never credited
-  paidCents: number; // amount Stripe reports collected
-  refundedCents: number; // cumulative, as Stripe reports (absolute, so replays are harmless)
-  /** True when this entry is what turned "Deposit in" on (so a refund may turn it off). */
-  setDepositIn?: boolean;
+  baseCents: number; // principal collected
+  feeCents: number; // card fee, never credited
+  paidCents: number; // principal + fee collected
+  refundedCents: number; // cumulative Stripe refund in cents (principal + fee)
+  /** Unambiguous principal refunded. Absent means "not stated", which is not a guess. */
+  refundedPrincipalCents?: number;
+  refundedFeeCents?: number;
+  /** Credit that stays in force while an ambiguous refund is in review. */
+  appliedPrincipalCents?: number;
+  needsReview?: boolean;
+  source?: 'stripe' | 'manual';
   note?: string;
-  events: string[]; // last processed Stripe event ids
+  events: string[];
   at: string;
 }
 
@@ -31,14 +34,25 @@ export function parseLedger(raw: unknown): LedgerEntry[] {
 }
 export const serializeLedger = (l: LedgerEntry[]) => JSON.stringify(l);
 
-/** Credit toward the invoice from one entry, net of refunds (refunds reduce credit pro rata with the fee). */
+/**
+ * Principal credited from one entry.
+ * A partial refund with no explicit principal/fee split does not change this number.
+ */
 export function creditedCents(e: LedgerEntry): number {
-  if (e.status !== 'paid' || e.paidCents <= 0) return 0;
-  const refundedShare = Math.min(1, Math.max(0, e.refundedCents) / e.paidCents);
-  return Math.max(0, Math.round(e.baseCents * (1 - refundedShare)));
+  if (e.status !== 'paid' && e.status !== 'review') return 0;
+  if (e.needsReview || e.status === 'review') return Math.max(0, e.appliedPrincipalCents ?? e.baseCents);
+  if (typeof e.refundedPrincipalCents === 'number') return Math.max(0, e.baseCents - e.refundedPrincipalCents);
+  if ((e.refundedCents ?? 0) <= 0) return Math.max(0, e.baseCents);
+  if (e.paidCents > 0 && e.refundedCents >= e.paidCents) return 0;
+  return Math.max(0, e.appliedPrincipalCents ?? e.baseCents);
 }
 
 export function sumCredited(l: LedgerEntry[], kind: PayKind, coId?: string): number {
   return l.filter((e) => e.kind === kind && (kind !== 'co' || e.coId === coId)).reduce((s, e) => s + creditedCents(e), 0);
 }
-export const hasProcessing = (l: LedgerEntry[], kind: PayKind, coId?: string) => l.some((e) => e.kind === kind && (kind !== 'co' || e.coId === coId) && (e.status === 'processing' || e.status === 'review'));
+export const hasProcessing = (l: LedgerEntry[], kind: PayKind, coId?: string) =>
+  l.some((e) => e.kind === kind && (kind !== 'co' || e.coId === coId) && (e.status === 'processing' || e.status === 'review' || e.needsReview === true));
+
+export function slotFor(kind: PayKind, coId?: string): string {
+  return kind === 'co' ? `co:${coId ?? ''}` : kind;
+}

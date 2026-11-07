@@ -143,15 +143,12 @@ export function zoneAddOverTrip(pricing: Pricing, zone: ZoneNumber): number {
 }
 
 /**
- * Zone add for a trip. Residential day service call: the Nov 3 supplement.
- * Residential after-hours/emergency/holiday in Zone 2/3: UNRESOLVED, returns null (never guessed).
- * Commercial: unchanged (difference over Zone 1).
+ * Zone add for a trip. Residential, including after-hours, emergency, and holiday:
+ * Zone 2 +$45, Zone 3 +$85 (Nov 3). Commercial is unchanged (difference over Zone 1).
  */
 export function zoneAddForTrip(pricing: Pricing, tier: Tier, kind: Exclude<TripKind, 'none'>, zone: ZoneNumber): number | null {
-  if (tier === 'residential') {
-    if (kind === 'day' || zone === 1) return N.zoneSupplement[zone];
-    return null;
-  }
+  void kind;
+  if (tier === 'residential') return N.zoneSupplement[zone];
   return zoneAddOverTrip(pricing, zone);
 }
 
@@ -161,11 +158,22 @@ export function tripCharge(pricing: Pricing, tier: Tier, kind: Exclude<TripKind,
   return z == null ? null : pricing[tier].trip[kind] + z;
 }
 
-/** Billable overtime hours: residential day calls round UP to the $75 half-hour; others bill as entered. */
+/**
+ * Billable overtime. Residential day calls round up to the $75 half-hour.
+ * Residential after-hours, emergency, and holiday round up to a full hour.
+ * Commercial is unchanged and bills the hours as entered.
+ */
 export function billableOvertime(tier: Tier, kind: Exclude<TripKind, 'none'>, hours: number): { hours: number; rounded: boolean; incrementUnresolved: boolean } {
   const h = Math.max(0, hours);
-  if (tier === 'residential' && kind === 'day') { const r = Math.ceil(h / N.dayIncrementHours - 1e-9) * N.dayIncrementHours; return { hours: r, rounded: r !== h, incrementUnresolved: false }; }
-  return { hours: h, rounded: false, incrementUnresolved: tier === 'residential' && h > 0 };
+  if (tier === 'residential' && kind === 'day') {
+    const r = Math.ceil(h / N.dayIncrementHours - 1e-9) * N.dayIncrementHours;
+    return { hours: r, rounded: Math.abs(r - h) > 1e-9, incrementUnresolved: false };
+  }
+  if (tier === 'residential') {
+    const r = Math.ceil(h - 1e-9);
+    return { hours: r, rounded: Math.abs(r - h) > 1e-9, incrementUnresolved: false };
+  }
+  return { hours: h, rounded: false, incrementUnresolved: false };
 }
 
 function norm(s: string): string {
