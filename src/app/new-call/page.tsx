@@ -54,7 +54,7 @@ export default async function NewCallPage() {
                 <dd className="tabular-nums font-semibold">${r.trip.day}</dd>
               </div>
               <p className="text-xs text-[color:var(--ink-muted)]">
-                Zone 1 trip and the first hour, then ${r.hourly.day}/hr. Zone 2 adds $
+                Zone 1 trip and up to {r.includedHours} hours, then ${r.hourly.day}/hr with their OK. Zone 2 adds $
                 {pricing.zones[2] - pricing.zones[1]}, Zone 3 adds ${pricing.zones[3] - pricing.zones[1]}.
               </p>
               <div className="flex justify-between gap-3 border-t border-[color:var(--line)] pt-2">

@@ -92,7 +92,7 @@ export function priceOption(doc: QuoteDoc, option: QuoteOptionDef, pricing: Pric
   const lines: PricedLine[] = [];
   for (const l of option.lines) lines.push({ label: l.quantity > 1 ? `${l.name} × ${l.quantity}` : l.name, amount: round2(num(l.price) * num(l.quantity, 1)), kind: 'work' });
   for (const a of addOns) lines.push({ label: `Add-on: ${a.quantity > 1 ? `${a.name} × ${a.quantity}` : a.name}`, amount: round2(num(a.price) * num(a.quantity, 1)), kind: 'addon' });
-  if (quote.trip) lines.push({ label: option.trip === 'none' ? 'Trip' : `${tripLabel(option.trip)} (includes first hour)`, amount: quote.trip, kind: 'trip' });
+  if (quote.trip) lines.push({ label: option.trip === 'none' ? 'Trip' : `${tripLabel(option.trip)} (includes up to ${pricing[doc.tier].includedHours} h)`, amount: quote.trip, kind: 'trip' });
   if (quote.zoneAdd) lines.push({ label: quote.trip ? `Zone ${doc.zone} travel, over Zone 1` : `Zone ${doc.zone} travel`, amount: quote.zoneAdd, kind: 'zone' });
   if (quote.laborCharged) lines.push({ label: `${quote.hours} more hour${quote.hours === 1 ? '' : 's'} at ${quote.hourlyRate}/hr`, amount: quote.laborCharged, kind: 'labor' });
   if (quote.materialsCharged) lines.push({ label: 'Materials', amount: quote.materialsCharged, kind: 'materials' });
@@ -102,7 +102,7 @@ export function priceOption(doc: QuoteDoc, option: QuoteOptionDef, pricing: Pric
   const items = (option.items ?? []).filter((it) => num(it.qty) > 0);
   let itemsLabor = 0, itemsMat = 0, itemsHours = 0, itemsMatCost = 0, gear = 0;
   const laborOnly = doc.furnish === 'labor';
-  const rate = pricing[doc.tier].hourly.day;
+  const rate = pricing[doc.tier].projectHourly;
   for (const it of items) {
     const h = num(it.hours) * num(it.qty) * ESTIMATE.laborBuffer;
     const m = laborOnly ? 0 : num(it.material) * num(it.qty);
@@ -126,7 +126,7 @@ export function priceOption(doc: QuoteDoc, option: QuoteOptionDef, pricing: Pric
 
   const total = round2(Math.max(0, gross - discount));
   const materialCost = round2(itemsMatCost + (laborOnly ? 0 : num(option.materialsCost)));
-  const hours = round2(itemsHours + quote.hours + (quote.trip ? 1 : 0));
+  const hours = round2(itemsHours + quote.hours + (quote.trip ? pricing[doc.tier].includedHours : 0));
   const internal = { hours, materialCost, effectiveRate: hours > 0 ? round2((total - materialCost - visitTrip) / hours) : 0 };
   if (doc.furnish) {
     const depositInfo = computeDeposit({ total, materials: materialCost, laborOnly, generator: doc.generator || gear > 0, generatorGear: gear });

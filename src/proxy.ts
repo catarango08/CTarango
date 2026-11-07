@@ -33,6 +33,6 @@ export const config = {
      * Everything except: the login screen and its endpoint, Next's own static
      * output, and the icon/manifest files the installed app needs.
      */
-    '/((?!login|api/login|_next/static|_next/image|favicon.ico|icon-|manifest.webmanifest|toolbox-sw.js|brand/).*)',
+    '/((?!login|api/login|pay/|api/stripe/webhook$|_next/static|_next/image|favicon.ico|icon-|manifest.webmanifest|toolbox-sw.js|brand/).*)',
   ],
 };

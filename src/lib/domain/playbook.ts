@@ -116,7 +116,7 @@ export function nextMove(job: RecordValue): Move {
 /** The diagnostic (day trip) that applies to a job, by type. Pass live pricing when you have it. */
 export function diagnosticFor(jobType: unknown, pricing: Pricing = fallbackPricing()): { fee: number; note: string } {
   const rates = pricing[tierForJobType(jobType)];
-  return { fee: rates.trip.day, note: `Zone 1 trip and first hour, then $${rates.hourly.day}/hr. Zones 2–3 add the difference.` };
+  return { fee: rates.trip.day, note: `Zone 1 trip and up to ${rates.includedHours} hour${rates.includedHours === 1 ? '' : 's'}, then $${rates.hourly.day}/hr${rates.includedHours === 2 ? " with the customer's OK" : ''}. Zones 2–3 add $${pricing.zones[2] - pricing.zones[1]} / $${pricing.zones[3] - pricing.zones[1]}.` };
 }
 
 export const STATUS_PLAYBOOK = PLAYBOOK;

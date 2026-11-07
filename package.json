@@ -12,8 +12,9 @@
     "notion:verify": "tsx scripts/verify-notion.ts",
     "notion:seed": "tsx scripts/seed-notion.ts",
     "brand:contrast": "node scripts/contrast.mjs",
-    "test": "tsx scripts/toolbox-test.mts",
-    "toolbox:import": "node scripts/toolbox-import.mjs"
+    "test": "tsx scripts/toolbox-test.ts && tsx scripts/payments-test.ts",
+    "toolbox:import": "node scripts/toolbox-import.mjs",
+    "test:payments": "tsx scripts/payments-test.ts"
   },
   "dependencies": {
     "clsx": "2.1.1",
@@ -22,6 +23,7 @@
     "next": "16.3.5",
     "react": "19.1.1",
     "react-dom": "19.1.1",
+    "stripe": "^19.3.0",
     "tesseract.js": "^5.1.1",
     "zod": "3.25.76"
   },

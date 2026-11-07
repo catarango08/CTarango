@@ -1,12 +1,13 @@
 import { num, round2 } from '../calc';
 import { MONEY } from './rules';
-import { NO_TRIP_FLATS, fallbackPricing, zoneAddOverTrip, type Pricing, type Tier, type TripKind, type ZoneNumber } from './pricing';
+import { NOV3_PRICING } from '@/config/pricing-2026-11-03';
+import { NO_TRIP_FLATS, billableOvertime, fallbackPricing, zoneAddForTrip, type Pricing, type Tier, type TripKind, type ZoneNumber } from './pricing';
 
 /**
  * Quote math off the Rate Book.
  *
  * - Trip (day / after-hours / emergency / holiday) includes the Zone 1 trip
- *   and the first hour. Outer zones add the difference over Zone 1.
+ *   and the included hours (residential: 2, Nov 3 pricing). See pricing.ts for zones.
  * - Extra hours bill at the tier's hourly for that trip kind.
  * - After-hours, emergency and holiday change only the trip and the hour.
  *   They never multiply the zone fee, flats, or materials.
@@ -31,7 +32,7 @@ export interface QuoteInput {
   zone?: ZoneNumber;
   /** Trip on the ticket. 'none' = flats only, which carry the full zone fee. */
   trip?: TripKind;
-  /** Hours past the first (included) hour. */
+  /** Hours past the included hours (2 on residential calls). Bill only with the customer's OK. */
   extraHours?: number;
   /** Known old condition flagged on the first look. Not hidden damage. */
   oldWork?: boolean;
@@ -55,6 +56,8 @@ export interface QuoteResult {
   depositDue: number;
   /** Plain-language notes to read out loud. */
   notes: string[];
+  /** Pricing questions the app will not guess (e.g. zone supplement on special calls). Block card checkout. */
+  unresolved: string[];
 }
 
 const TRIP_LABEL: Record<Exclude<TripKind, 'none'>, string> = {
@@ -91,18 +94,30 @@ export function buildQuote(input: QuoteInput): QuoteResult {
   let trip = 0;
   let zoneAdd = 0;
   let hourlyRate = 0;
-  const hours = Math.max(0, num(input.extraHours));
+  const unresolved: string[] = [];
+  let hours = Math.max(0, num(input.extraHours));
   if (tripKind !== 'none') {
     trip = rates.trip[tripKind];
-    zoneAdd = zoneAddOverTrip(pricing, zone);
+    const z = zoneAddForTrip(pricing, tier, tripKind, zone);
+    if (z == null) {
+      unresolved.push(`Zone ${zone} supplement on a ${TRIP_LABEL[tripKind].toLowerCase()} is not decided (Nov 3 pricing). Nothing added; confirm with Corey.`);
+      notes.push(`Zone ${zone} supplement for this call type: not decided. Nothing added.`);
+    } else zoneAdd = z;
     hourlyRate = rates.hourly[tripKind];
-    notes.push(`${TRIP_LABEL[tripKind]} includes the Zone 1 trip and the first hour.`);
-    if (zoneAdd) notes.push(`Zone ${zone} adds $${zoneAdd} over Zone 1.`);
+    notes.push(`${TRIP_LABEL[tripKind]} includes the Zone 1 trip and up to ${rates.includedHours} hour${rates.includedHours === 1 ? '' : 's'}.`);
+    if (zoneAdd) notes.push(`Zone ${zone} adds $${zoneAdd}.`);
+    if (hours > 0) {
+      const b = billableOvertime(tier, tripKind, hours);
+      if (b.rounded) notes.push(`${hours} h rounds up to ${b.hours} h ($${round2(hourlyRate / 2)} per half-hour).`);
+      if (b.incrementUnresolved) notes.push('Billing increment for this call type was not stated; hours bill as entered.');
+      hours = b.hours;
+      if (tier === 'residential') notes.push("Time past the included hours bills only with the customer's OK.");
+    }
   } else if (tripFlats.length > 0) {
     zoneAdd = pricing.zones[zone];
     notes.push(`Flat rates are plus the Zone ${zone} fee.`);
   }
-  if (tripKind === 'none' && hours > 0) hourlyRate = rates.hourly.day;
+  if (tripKind === 'none' && hours > 0) hourlyRate = rates.projectHourly;
   const laborCharged = round2(hours * hourlyRate);
   if (laborCharged) notes.push(`${hours} more hour${hours === 1 ? '' : 's'} at $${hourlyRate}/hr.`);
 
@@ -112,8 +127,12 @@ export function buildQuote(input: QuoteInput): QuoteResult {
   const oldWorkAdd = input.oldWork ? round2((flats + materialsCharged + laborCharged) * MONEY.oldWorkSurcharge) : 0;
   if (oldWorkAdd) notes.push(`Old work +${MONEY.oldWorkSurcharge * 100}%: a known condition, flagged on the first look.`);
 
-  const diagnosticCredit = round2(num(input.creditDiagnostic));
-  if (diagnosticCredit) notes.push(`Diagnostic $${diagnosticCredit} credited: repaired the same visit.`);
+  // The service call is credited once, and never more than the service call itself.
+  const creditCap = tier === 'residential' ? NOV3_PRICING.serviceCallCredit : rates.trip.day;
+  const askedCredit = round2(num(input.creditDiagnostic));
+  const diagnosticCredit = Math.min(askedCredit, creditCap);
+  if (askedCredit > creditCap) notes.push(`Credit capped at $${creditCap} (the service call).`);
+  if (diagnosticCredit) notes.push(`Service call $${diagnosticCredit} credited toward the approved repair (once).`);
 
   const total = round2(Math.max(0, subtotal + oldWorkAdd - diagnosticCredit));
   const depositDue = total > MONEY.depositThreshold ? round2(total * MONEY.depositRate) : 0;
@@ -134,5 +153,6 @@ export function buildQuote(input: QuoteInput): QuoteResult {
     total,
     depositDue,
     notes,
+    unresolved,
   };
 }

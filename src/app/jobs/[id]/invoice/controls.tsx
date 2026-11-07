@@ -7,10 +7,10 @@ export function PrintButton() {
   return <button type="button" className="btn" onClick={() => window.print()}>Print / save PDF</button>;
 }
 
-export function InvoiceControls({ jobId, jobStatus, due, byCard, coLinks, status, statuses, payLink, linkLabel }: { jobId: string; jobStatus: string; due: number; byCard: boolean; coLinks: { id: string; label: string }[]; status: string; statuses: string[]; payLink: string; linkLabel: string }) {
+export function InvoiceControls({ jobId, jobStatus, due, byCard, coLinks, status, statuses, payLink, linkLabel, blockers, repriceNote, configMissing }: { jobId: string; jobStatus: string; due: number; byCard: boolean; coLinks: { id: string; label: string }[]; status: string; statuses: string[]; payLink: string; linkLabel: string; blockers: string[]; repriceNote: string; configMissing: string[] }) {
   const router = useRouter();
   const [s, setS] = useState(status);
-  const [link, setLink] = useState(payLink);
+  const [copied, setCopied] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
   async function save(patch: Record<string, unknown>) {
@@ -55,17 +55,21 @@ export function InvoiceControls({ jobId, jobStatus, due, byCard, coLinks, status
       )}
       {coLinks.map((c) => <a key={c.id} className="mt-2 flex min-h-12 items-center underline" href={`?co=${c.id}`}>{c.label}</a>)}
     </div>
-    <details className="panel p-3 text-sm"><summary className="min-h-12 cursor-pointer font-semibold">Invoice status · Stripe link</summary>
+    <details className="panel p-3 text-sm"><summary className="min-h-12 cursor-pointer font-semibold">Invoice status · card pay link</summary>
     <div className="mt-2 flex flex-wrap items-end gap-3">
       <label>Invoice Status
         <select className="input" value={s} onChange={(e) => { setS(e.target.value); void save({ invoiceStatus: e.target.value }); }}>
           {statuses.map((x) => <option key={x}>{x}</option>)}
         </select>
       </label>
-      <label className="min-w-64 flex-1">{linkLabel} (paste from Stripe)
-        <input type="url" className="input" placeholder="https://buy.stripe.com/…" value={link} onChange={(e) => setLink(e.target.value)} />
-      </label>
-      <button type="button" className="btn-primary" onClick={() => save({ payLink: link.trim() || null })}>Save link</button>
+    </div>
+    <div className="mt-3 space-y-1" data-testid="card-link">
+      <p className="font-semibold">{linkLabel}: card checkout for the exact balance</p>
+      {configMissing.length > 0 && <p className="text-xs">Card payments are not configured. Missing env: {configMissing.join(', ')}.</p>}
+      {blockers.map((b) => <p key={b} className="text-xs text-[color:var(--hazard)]">No card link: {b}.</p>)}
+      {repriceNote && <p className="text-xs">{repriceNote}</p>}
+      {payLink && <button type="button" className="btn min-h-12" onClick={async () => { await navigator.clipboard.writeText(payLink); setCopied(true); }}>{copied ? 'Copied ✓' : 'Copy customer pay link'}</button>}
+      <p className="text-xs text-[color:var(--ink-muted)]">Paid is set only when Stripe confirms (webhook). The amount is recomputed at checkout.</p>
     </div></details>
       {msg && <span>{msg}</span>}
     </div>

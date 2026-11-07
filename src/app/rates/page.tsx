@@ -28,7 +28,7 @@ export default async function RatesPage({ searchParams }: { searchParams: Promis
       />
 
       <section className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Day trip / diagnostic" value={`$${r.trip.day}`} hint={`Zone 1 + first hour, then $${r.hourly.day}/hr`} />
+        <Stat label="Day trip / diagnostic" value={`$${r.trip.day}`} hint={`Service call: Zone 1 + up to ${r.includedHours} h, then $${r.hourly.day}/hr ($${r.hourly.day / 2}/half-hour) with the customer's OK. Project labor $${r.projectHourly}/hr. Nov 3 pricing.`} />
         <Stat label="Commercial diagnostic" value={`$${c.trip.day}`} hint={`Then $${c.hourly.day}/hr`} />
         <Stat label="Materials" value={`+${MONEY.materialsMarkup * 100}%`} hint="On your cost" />
         <Stat label="Deposit" value={`${MONEY.depositRate * 100}%`} hint={`Over ${money(MONEY.depositThreshold, true)}`} />
@@ -103,7 +103,7 @@ export default async function RatesPage({ searchParams }: { searchParams: Promis
             </tbody>
           </table>
           <p className="mt-2 text-xs text-[color:var(--ink-muted)]">
-            Every trip includes the Zone 1 trip and the first hour. Zones 2 and 3 add the difference over Zone 1, never multiplied.
+            Residential (Nov 3 pricing): every call includes the Zone 1 trip and up to 2 hours. A day service call adds $45 in Zone 2 and $85 in Zone 3. Whether those supplements apply to after-hours, emergency and holiday calls is not decided yet, so those quotes are flagged. Commercial: the trip includes Zone 1 and the first hour.
             Flats are plus the zone fee. LOTO add-on has no trip fee.
             {pricing.source !== 'notion' && ' Some numbers are fallbacks: a Rate Book row was missing.'}
           </p>

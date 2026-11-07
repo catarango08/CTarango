@@ -1,4 +1,5 @@
 import type { RecordValue } from '../schema';
+import { NOV3_PRICING as N } from '@/config/pricing-2026-11-03';
 
 /**
  * Trip, hour and zone pricing, as the Notion Rate Book states it.
@@ -8,9 +9,8 @@ import type { RecordValue } from '../schema';
  * as of Oct 22, 2026.
  *
  * Rules from the Rate Book:
- * - The day trip / diagnostic covers the first visit: the Zone 1 trip plus the
- *   first hour. Outer zones add only the difference over Zone 1, so Zone 1 is
- *   never charged twice.
+ * - RESIDENTIAL is locked to Corey's Nov 3, 2026 pricing (src/config/pricing-2026-11-03.ts);
+ *   the Rate Book cannot override it. Commercial still reads the Rate Book.
  * - After-hours, emergency and holiday change the trip and the hour only.
  *   The zone add is never multiplied (fuel costs the same after dark).
  * - Flat rates are plus the full zone fee when there is no trip on the ticket.
@@ -22,8 +22,12 @@ export type ZoneNumber = 1 | 2 | 3;
 
 export interface TierRates {
   trip: Record<Exclude<TripKind, 'none'>, number>;
-  /** Hourly after the first (included) hour. */
+  /** Hourly after the included hours. */
   hourly: Record<Exclude<TripKind, 'none'>, number>;
+  /** Hours on site included in the trip / service call. */
+  includedHours: number;
+  /** Project / flat-rate labor (estimates, no-trip hours). */
+  projectHourly: number;
 }
 
 export interface Pricing {
@@ -41,13 +45,14 @@ export const ZONE_LABELS: Record<ZoneNumber, string> = {
 };
 
 /**
- * Residential (everyone who is not commercial). Matches the Rate Book.
- * Holiday T&M ($180) is its own active row. Emergency hours bill at the
- * after-hours rate (no separate row).
+ * Residential (everyone who is not commercial): Corey's Nov 3, 2026 pricing.
+ * Locked. The stale Rate Book ($160 etc.) cannot override it.
  */
 export const RESIDENTIAL_FALLBACK: TierRates = {
-  trip: { day: 160, afterHours: 240, emergency: 315, holiday: 320 },
-  hourly: { day: 90, afterHours: 135, emergency: 135, holiday: 180 },
+  trip: { ...N.serviceCall },
+  hourly: { ...N.overtimeHourly },
+  includedHours: N.includedHours,
+  projectHourly: N.projectHourly,
 };
 
 /**
@@ -58,9 +63,15 @@ export const RESIDENTIAL_FALLBACK: TierRates = {
 export const COMMERCIAL_FALLBACK: TierRates = {
   trip: { day: 195, afterHours: 295, emergency: 370, holiday: 390 },
   hourly: { day: 110, afterHours: 165, emergency: 165, holiday: 220 },
+  includedHours: 1,
+  projectHourly: 110,
 };
 
-export const ZONE_FALLBACK: Record<ZoneNumber, number> = { 1: 70, 2: 115, 3: 155 };
+/**
+ * Standalone zone fees for no-trip flat/project work (unchanged since Oct 22).
+ * The over-Zone-1 differences (45 / 85) match the Nov 3 service-call supplements; a test checks this.
+ */
+export const ZONE_FALLBACK: Record<ZoneNumber, number> = { 1: 70, 2: 70 + N.zoneSupplement[2], 3: 70 + N.zoneSupplement[3] };
 
 /** Rate Book row names, exactly as they appear in Notion. */
 const ROWS = {
@@ -98,7 +109,9 @@ export function pricingFromRateBook(rows: RecordValue[]): Pricing {
     hits++;
     return v;
   };
-  const tier = (names: (typeof ROWS)['residential'] | (typeof ROWS)['commercial'], fb: TierRates): TierRates => ({
+  const tier = (names: (typeof ROWS)['commercial'], fb: TierRates): TierRates => ({
+    includedHours: fb.includedHours,
+    projectHourly: get(names.hourly.day, fb.projectHourly),
     trip: {
       day: get(names.trip.day, fb.trip.day),
       afterHours: get(names.trip.afterHours, fb.trip.afterHours),
@@ -112,14 +125,11 @@ export function pricingFromRateBook(rows: RecordValue[]): Pricing {
       holiday: get(names.hourly.holiday, fb.hourly.holiday),
     },
   });
-  const zones = {
-    1: get(ROWS.zones[1], ZONE_FALLBACK[1]),
-    2: get(ROWS.zones[2], ZONE_FALLBACK[2]),
-    3: get(ROWS.zones[3], ZONE_FALLBACK[3]),
-  };
-  const residential = tier(ROWS.residential, RESIDENTIAL_FALLBACK);
+  // Nov 3, 2026: residential and zone pricing are locked to config; the stale Rate Book is ignored for them.
+  const zones = { ...ZONE_FALLBACK };
+  const residential = clone(RESIDENTIAL_FALLBACK);
   const commercial = tier(ROWS.commercial, COMMERCIAL_FALLBACK);
-  return { zones, residential, commercial, source: misses === 0 ? 'notion' : hits === 0 ? 'fallback' : 'mixed' };
+  return { zones, residential, commercial, source: hits === 0 ? 'fallback' : 'mixed' };
 }
 
 export function tierForJobType(jobType: unknown): Tier {
@@ -132,9 +142,30 @@ export function zoneAddOverTrip(pricing: Pricing, zone: ZoneNumber): number {
   return Math.max(0, pricing.zones[zone] - pricing.zones[1]);
 }
 
-/** The trip charge for a visit: trip price (includes Zone 1 + first hour) plus the outer-zone difference, never multiplied. */
-export function tripCharge(pricing: Pricing, tier: Tier, kind: Exclude<TripKind, 'none'>, zone: ZoneNumber): number {
-  return pricing[tier].trip[kind] + zoneAddOverTrip(pricing, zone);
+/**
+ * Zone add for a trip. Residential day service call: the Nov 3 supplement.
+ * Residential after-hours/emergency/holiday in Zone 2/3: UNRESOLVED, returns null (never guessed).
+ * Commercial: unchanged (difference over Zone 1).
+ */
+export function zoneAddForTrip(pricing: Pricing, tier: Tier, kind: Exclude<TripKind, 'none'>, zone: ZoneNumber): number | null {
+  if (tier === 'residential') {
+    if (kind === 'day' || zone === 1) return N.zoneSupplement[zone];
+    return null;
+  }
+  return zoneAddOverTrip(pricing, zone);
+}
+
+/** Trip charge, or null when the zone supplement is unresolved for that call type. */
+export function tripCharge(pricing: Pricing, tier: Tier, kind: Exclude<TripKind, 'none'>, zone: ZoneNumber): number | null {
+  const z = zoneAddForTrip(pricing, tier, kind, zone);
+  return z == null ? null : pricing[tier].trip[kind] + z;
+}
+
+/** Billable overtime hours: residential day calls round UP to the $75 half-hour; others bill as entered. */
+export function billableOvertime(tier: Tier, kind: Exclude<TripKind, 'none'>, hours: number): { hours: number; rounded: boolean; incrementUnresolved: boolean } {
+  const h = Math.max(0, hours);
+  if (tier === 'residential' && kind === 'day') { const r = Math.ceil(h / N.dayIncrementHours - 1e-9) * N.dayIncrementHours; return { hours: r, rounded: r !== h, incrementUnresolved: false }; }
+  return { hours: h, rounded: false, incrementUnresolved: tier === 'residential' && h > 0 };
 }
 
 function norm(s: string): string {
@@ -142,5 +173,5 @@ function norm(s: string): string {
 }
 
 function clone(t: TierRates): TierRates {
-  return { trip: { ...t.trip }, hourly: { ...t.hourly } };
+  return { trip: { ...t.trip }, hourly: { ...t.hourly }, includedHours: t.includedHours, projectHourly: t.projectHourly };
 }

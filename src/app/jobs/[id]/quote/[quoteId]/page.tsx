@@ -1,3 +1,5 @@
+import { payConfig } from '@/lib/payments/config';
+import { signPayToken } from '@/lib/payments/token';
 import { notFound } from 'next/navigation';
 import { findById, loadAll, relatedTo } from '@/lib/data';
 import { loadPricing } from '@/lib/pricing';
@@ -10,6 +12,12 @@ import { CustomerQuote } from './customer-quote';
 export const dynamic = 'force-dynamic';
 
 /** What the customer sees on Corey's phone. Town only — no street address. */
+/** Deposit card link: app checkout for the deposit on the job (never a fixed Stripe link). */
+function depositPayUrl(jobId: string): string {
+  const c = payConfig();
+  return c.ok ? `${c.cfg.baseUrl}/pay/${signPayToken({ jobId, kind: 'deposit' }, c.cfg.linkSecret)}` : '';
+}
+
 export default async function CustomerQuotePage({ params }: { params: Promise<{ id: string; quoteId: string }> }) {
   const { id, quoteId } = await params;
   const [job, quote] = await Promise.all([findById('jobs', id), findById('quotes', quoteId)]);
@@ -43,7 +51,7 @@ export default async function CustomerQuotePage({ params }: { params: Promise<{ 
       signedBy={String(quote.signedBy ?? '')}
       photo={photo}
       expires={expires}
-      payLink={String(job.payLink ?? '')}
+      payLink={depositPayUrl(id)}
       depositIn={job.depositIn === true}
       scheduled={scheduled}
     />

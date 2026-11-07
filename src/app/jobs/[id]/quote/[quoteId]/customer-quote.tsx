@@ -1,5 +1,7 @@
 'use client';
 
+import { DEPOSIT_POLICY } from '@/config/deposit-policy';
+
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { priceOption, type QuoteDoc } from '@/lib/domain/options';
@@ -177,8 +179,8 @@ export function CustomerQuote(p: Props) {
           <h1 className="mt-4 text-2xl font-bold">Deposit {priced.deposit ? money(priced.deposit) : ''}</h1>
           {priced.deposit > 0 ? (
             <div className="mt-3 space-y-2">
-              {p.payLink ? <a href={p.payLink} className={`${big} flex items-center justify-center bg-neutral-900 text-white`}>Pay by card ({money(priced.deposit + (dep?.cardFee ?? 0))} incl. 2.5% card fee)</a>
-                : <p className="text-base text-neutral-600">Card link not set on this job yet.</p>}
+              {p.payLink ? <a href={p.payLink} className={`${big} flex items-center justify-center bg-neutral-900 text-white`}>Pay by card ({money((Math.round(priced.deposit * 100) + Math.round(Math.round(priced.deposit * 100) * DEPOSIT_POLICY.cardFee)) / 100)} incl. 2.5% card fee)</a>
+                : <p className="text-base text-neutral-600">Card payments are not set up yet.</p>}
               <div className="grid grid-cols-3 gap-2">
                 {['Zelle', 'Check', 'Cash'].map((m) => (
                   <button key={m} type="button" className={`min-h-14 rounded-lg border-2 ${paid === m ? 'border-green-600 bg-green-50' : 'border-neutral-300'}`}
